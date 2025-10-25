@@ -1,411 +1,282 @@
-import { getWebContainer } from "@/components/container";
-import type { FSDirectory, FSNode } from "@/ide/filesystem";
-import { useFileSystem } from "@/ide/filesystem";
-import { useEditorState } from "@/ide/editor";
-import { bufferWatchEvents } from "@/lib/utils/buffer";
-import { getEncoding } from "@/lib/utils/istextorbinary";
+import { 
+  FileChangeType, 
+  FileSystemProviderCapabilities, 
+  FileSystemProviderError, 
+  FileSystemProviderErrorCode, 
+  FileType, 
+  type IFileChange, 
+  type IFileDeleteOptions, 
+  type IFileOverwriteOptions, 
+  type IFileSystemProviderWithFileReadWriteCapability, 
+  type IFileWriteOptions, 
+  type IStat 
+} from "@codingame/monaco-vscode-files-service-override";
+import { 
+  Disposable, 
+  type IDisposable 
+} from "@codingame/monaco-vscode-api/vscode/vs/base/common/lifecycle";
+import { configure, ErrnoError, fs } from "@zenfs/core";
+import { IndexedDB } from "@zenfs/dom"
+import { Emitter, Event } from "@codingame/monaco-vscode-api/vscode/vs/base/common/event";
+import { URI } from "@codingame/monaco-vscode-api/vscode/vs/base/common/uri";
 import type { DirectoryNode, FileNode, FileSystemTree, SymlinkNode } from "@webcontainer/api";
-import { WebContainer } from "@webcontainer/api";
-import { configure } from "@zenfs/core";
-import zenFs from "@zenfs/core";
-import { IndexedDB } from '@zenfs/dom';
+import { getWebContainer, isWebContainerBooted } from "@/ide/webcontainer";
 
-// const utf8TextDecoder = new TextDecoder('utf8', { fatal: true });
-const FS_IGNORE_PATHS = ["**/node_modules", ".git"]
-
-type FileChangeCallback = (content: string) => void;
-
-class ZenFileSystemHandler {
-  private fileChangeSubscriptions: Map<string, Set<FileChangeCallback>>;
-  private editorWriteTimestamps: Map<string, number>;
-  private readonly EDITOR_WRITE_GRACE_PERIOD = 1000; // 1 second grace period
-
-  constructor() {
-    this.fileChangeSubscriptions = new Map();
-    this.editorWriteTimestamps = new Map();
+await configure({
+  mounts: {
+    "/": IndexedDB
+  }
+})
+export class ZenFSProvider extends Disposable implements IFileSystemProviderWithFileReadWriteCapability {
+  capabilities = 
+    FileSystemProviderCapabilities.FileReadWrite | 
+    FileSystemProviderCapabilities.FileOpenReadWriteClose;
+  
+  onDidChangeCapabilities = Event.None
+  _onDidChangeFile = new Emitter<readonly IFileChange[]>()
+  onDidChangeFile = this._onDidChangeFile.event
+  
+  async readFile(resource: URI): Promise<Uint8Array> {
+    try {
+      return await fs.promises.readFile(resource.path);
+    } catch (e) {
+      throw this.toFileSystemProviderError(e as ErrnoError);
+    }
   }
 
-  async init()  {
-    await configure({
-      mounts: {
-        "/": IndexedDB
+  async writeFile(resource: URI, content: Uint8Array, opts: IFileWriteOptions & { webContainer?: boolean }): Promise<void> {
+    try {
+      console.log(" -> writeFile", resource.path, content)
+      const promises = [fs.promises.writeFile(resource.path, content)];
+      if (!opts.webContainer && isWebContainerBooted() && resource.path.startsWith("/home/workspace")) { // this did not come from webcontainer, so we need to propagate to webcontainer
+        const wcPath = resource.path.substring("/home/workspace".length)
+        promises.push(getWebContainer().then((wc) => wc.fs.writeFile(wcPath, content)));
       }
-    })
-    zenFs.writeFileSync("/test.txt", "Hello World");
-
-    const setFiles = useFileSystem.getState().setFiles;
-    const { editorFiles } = await this.buildFileTree();
-    setFiles({ directory: editorFiles, open: true });
-  }
-
-  async buildFileTree() {
-    const buildTree = async (path: string): Promise<{ result: DirectoryNode | FileNode | SymlinkNode, editorState: FSNode }> => {
-      const stats = zenFs.statSync(path);
+      await Promise.all(promises);
+      this._fireSoon({ 
+        type: opts.create ? FileChangeType.ADDED : FileChangeType.UPDATED, 
+        resource 
+      });
       
-      if (stats.isSymbolicLink()) {
-        const target = zenFs.readlinkSync(path).toString('utf-8');
-        return {
-          result: {
-            file: {
-              symlink: target
-            }
-          },
-          editorState: {
-            symlink: {
-              target
-            }
-          }
-        };
-      }
-        
-      if (stats.isFile()) {
-        const buff = zenFs.readFileSync(path);
-        return {
-          result: {
-            file: {
-              contents: buff
-            }
-          },
-          editorState: {
-            file: {
-              size: stats.size,
-              isBinary: isBinaryFile(buff)
-            }
-          }
-        };
-      }
-        
-      if (stats.isDirectory()) {
-        const entries = zenFs.readdirSync(path);
-        const webContainerTree: FileSystemTree = {};
-        const editorTree: { [key: string]: FSNode } = {};
-        
-        const buildPromises = entries.map(async (entry) => {
-          const fullPath = path === '/' ? `/${entry}` : `${path}/${entry}`;
-          const { result, editorState } = await buildTree(fullPath);
-          return { entry, result, editorState };
-        });
+    } catch (e) {
+      throw this.toFileSystemProviderError(e as ErrnoError);
+    }
+  }
 
-        const results = await Promise.all(buildPromises);
-        
-        for (const { entry, result, editorState } of results) {
-          webContainerTree[entry] = result;
-          editorTree[entry] = editorState;
-        }
-        
-        return {
-          result: { directory: webContainerTree },
-          editorState: { directory: editorTree, open: false } // TODO: maybe persist this? Would be slow...
-        };
+  async stat(resource: URI): Promise<IStat> {
+    try {
+      const stats = await fs.promises.stat(resource.path);
+      return {
+        type: stats.isDirectory() ? FileType.Directory : FileType.File,
+        size: stats.size,
+        mtime: stats.mtime.getTime(),
+        ctime: stats.ctime.getTime()
+      };
+    } catch (e) {
+      throw this.toFileSystemProviderError(e as ErrnoError);
+    }
+  }
+
+  async mkdir(resource: URI, opts?: { webContainer?: boolean; recursive?: boolean }): Promise<void> {
+    try {
+      const promises = [fs.promises.mkdir(resource.path, { recursive: opts?.recursive ?? false })];
+      if (!opts?.webContainer && isWebContainerBooted() && resource.path.startsWith("/home/workspace")) {
+        const wcPath = resource.path.substring("/home/workspace".length)
+        promises.push(getWebContainer().then((wc) => wc.fs.mkdir(wcPath, { 
+          recursive: (opts?.recursive ?? false) as true // FUCK YOU TYPESCRIPT I DO NOT CARE ABOUT THE RETURN TYPE JFC https://discord.com/channels/289587909051416579/555469074080202765/1333327174891077653 (PaperMC server)
+        })))
+      }
+      await Promise.all(promises);
+      this._fireSoon({ type: FileChangeType.ADDED, resource });
+    } catch (e) {
+      throw this.toFileSystemProviderError(e as ErrnoError);
+    }
+  }
+
+  async readdir(resource: URI): Promise<[string, FileType][]> {
+    try {
+      const entries = await fs.promises.readdir(resource.path);
+      const result: [string, FileType][] = [];
+      
+      for (const entry of entries) {
+        const stats = await fs.promises.stat(`${resource.path}/${entry}`);
+        result.push([
+          entry,
+          stats.isDirectory() ? FileType.Directory : FileType.File
+        ]);
       }
       
-      throw new Error(`Unsupported file type at path: ${path}`);
-    };
-
-    const dirs = zenFs.readdirSync("/"); // TODO: implement projects by instead reading from /<project>/*
-    const buildPromises = dirs.map(async (dir) => {
-      const { result, editorState } = await buildTree(`/${dir}`);
-      return { dir, result, editorState };
-    });
-
-    const results = await Promise.all(buildPromises);
-    
-    const files: FileSystemTree = {};
-    const editorFiles: { [key: string]: FSNode } = {};
-    for (const { dir, result, editorState } of results) {
-      files[dir] = result;
-      editorFiles[dir] = editorState;
+      return result;
+    } catch (e) {
+      throw this.toFileSystemProviderError(e as ErrnoError);
     }
-
-    return { files, editorFiles };
   }
 
-  async mountWebContainer(webContainer: WebContainer) {
-    const { files } = await this.buildFileTree();
-    await webContainer.mount(files, { mountPoint: "/" });
-    console.log("mounted, watching paths...");
-    webContainer.internal.watchPaths(
-      { include: [`/home/workspace/**`], exclude: FS_IGNORE_PATHS, includeContent: true},
-      bufferWatchEvents(100, (events) => {
-        const watchEvents = events.flat(2);
-        const traversePath = (sanitizedPath: string) => {
-          // update editor state
-          const editorFiles = { ...useFileSystem.getState().files };
-          // recurse to the parent
-          let current: FSDirectory = editorFiles;
-          const parts = sanitizedPath.split('/').filter(Boolean);
-          for (let i = 0; i < parts.length - 1; i++) {
-            if (!('directory' in current)) {
-              console.error(" -> error adding dir, reached a file when dir was expected??", sanitizedPath, current);
-              return { current: undefined, parts: undefined, editorFiles: undefined };
+  async delete(resource: URI, opts: IFileDeleteOptions & { webContainer?: boolean }): Promise<void> {
+    if (opts.recursive) {
+      try {
+        const recursiveRemove = async (path: string) => { // odd zenfs quirk
+          const entries = await fs.promises.readdir(path);
+          if (entries.length > 0) {
+            for (const file of entries) {
+              await recursiveRemove(`${path}/${file}`).catch((e) => {
+                console.log(" -> [1] error removing", resource.path, e);
+              });
             }
-            const part = parts[i];
-            if (!part) {
-              console.error(" -> error traversing path, part is undefined", sanitizedPath);
-              return { current: undefined, parts: undefined, editorFiles: undefined };
-            }
-            current = current.directory[part] as FSDirectory;
           }
-          return { current, parts, editorFiles };
+          // check if path is valid
+          if (await fs.promises.exists(path)) {
+            await fs.promises.rm(path, { recursive: true });
+          }
         }
-        for (const { type, path, buffer } of watchEvents) { // TODO: Clean up this code!!
-          console.log(type, path, buffer);
-          // remove trailing slash
-          let sanitizedPath = path.replace(/\/+$/g, "");
-          if (!sanitizedPath.startsWith("/home/workspace")) {
-            continue;
-          }
-          // remove leading /home/workspace
-          sanitizedPath = sanitizedPath.substring("/home/workspace".length);
+        const promises = [recursiveRemove(resource.path)];
+        if (!opts.webContainer && isWebContainerBooted() && resource.path.startsWith("/home/workspace")) {
+          const wcPath = resource.path.substring("/home/workspace".length)
+          promises.push(getWebContainer().then((wc) => wc.fs.rm(wcPath, { recursive: true, force: true })));
+        }
+        await Promise.all(promises);
+        this._fireSoon({ type: FileChangeType.DELETED, resource });
+      } catch (error) {
+        console.log(" -> error removing", resource.path, error);
+      }
+    } else {
+      const promises = [fs.promises.rm(resource.path)];
+      if (!opts.webContainer && isWebContainerBooted() && resource.path.startsWith("/home/workspace")) {
+        const wcPath = resource.path.substring("/home/workspace".length)
+        promises.push(getWebContainer().then((wc) => wc.fs.rm(wcPath, { force: true })));
+      }
+      await Promise.all(promises);
+      this._fireSoon({ type: FileChangeType.DELETED, resource });
+    }
+  }
+
+  async rename(from: URI, to: URI, opts?: IFileOverwriteOptions & { webContainer?: boolean }): Promise<void> {
+    try {
+      const promises = [fs.promises.rename(from.path, to.path)];
+      if (!opts?.webContainer && isWebContainerBooted() && from.path.startsWith("/home/workspace")) {
+        const wcFromPath = from.path.substring("/home/workspace".length)
+        const wcToPath = to.path.substring("/home/workspace".length)
+        promises.push(getWebContainer().then((wc) => wc.fs.rename(wcFromPath, wcToPath)));
+      }
+      await Promise.all(promises);
+      this._fireSoon({ type: FileChangeType.UPDATED, resource: to });
+    } catch (e) {
+      throw this.toFileSystemProviderError(e as ErrnoError);
+    }
+  }
+
+  watch(): IDisposable {
+    return Disposable.None;
+  }
+
+  private toFileSystemProviderError(error: ErrnoError): FileSystemProviderError {
+		if (error instanceof FileSystemProviderError) {
+			return error; // avoid double conversion
+		}
+
+		let resultError: Error | string = error;
+		let code: FileSystemProviderErrorCode;
+		switch (error.code) {
+			case 'ENOENT':
+				code = FileSystemProviderErrorCode.FileNotFound;
+				break;
+			case 'EISDIR':
+				code = FileSystemProviderErrorCode.FileIsADirectory;
+				break;
+			case 'ENOTDIR':
+				code = FileSystemProviderErrorCode.FileNotADirectory;
+				break;
+			case 'EEXIST':
+				code = FileSystemProviderErrorCode.FileExists;
+				break;
+			case 'EPERM':
+			case 'EACCES':
+				code = FileSystemProviderErrorCode.NoPermissions;
+				break;
+			default:
+				code = FileSystemProviderErrorCode.Unknown;
+		}
+
+		return FileSystemProviderError.create(resultError, code);
+	}
+  private _bufferedChanges: IFileChange[] = []
+  private _fireSoonHandle?: number
+  private _fireSoon(...changes: IFileChange[]): void {
+    this._bufferedChanges.push(...changes)
+
+    if (this._fireSoonHandle != null) {
+      clearTimeout(this._fireSoonHandle)
+      this._fireSoonHandle = undefined
+    }
+
+    this._fireSoonHandle = window.setTimeout(() => {
+      this._onDidChangeFile.fire(this._bufferedChanges)
+      this._bufferedChanges.length = 0
+    }, 5)
+  }
+}
+
+export const buildFileTree = async () => {
+  const buildTree = async (path: string): Promise<DirectoryNode | FileNode | SymlinkNode> => {
+    const stats = await fs.promises.stat(path);
+    
+    if (stats.isSymbolicLink()) {
+      const target = fs.readlinkSync(path).toString('utf-8');
+      return {
+        file: {
+          symlink: target
+        }
+      };
+    }
       
-          switch (type) {
-            case "add_dir": {
-              // propagate to zenfs
-              zenFs.mkdirSync(sanitizedPath);
-              const { current, parts, editorFiles } = traversePath(sanitizedPath);
-              if (!current || !parts || !editorFiles) {
-                console.error("[x] error adding dir, could not traverse path", sanitizedPath);
-                break;
-              }
-              const lastPart = parts[parts.length - 1];
-              if (!lastPart) {
-                console.error("[x] error adding dir, no last part in path", sanitizedPath);
-                break;
-              }
-              current.directory[lastPart] = { directory: {}, open: false };
-              useFileSystem.getState().setFiles(editorFiles);
-              break;
-            }
-            case "remove_dir": {
-              // propagate to zenfs
-              console.log(" -> removing", sanitizedPath);
-              try {
-                const recursiveRemove = async (path: string) => {
-                  const files = zenFs.readdirSync(path);
-                  if (files.length > 0) {
-                    for (const file of files) {
-                      await recursiveRemove(`${path}/${file}`).catch((e) => {
-                        console.log(" -> [1] error removing", sanitizedPath, e);
-                      });
-                    }
-                  }
-                  // check if path is valid
-                  if (zenFs.existsSync(path)) {
-                    await zenFs.promises.rm(path, { recursive: true });
-                  }
-                }
-                recursiveRemove(sanitizedPath).then(() => {
-                  console.log(" -> removed", sanitizedPath);
-                }).catch((error) => {
-                  console.log(" -> error removing", sanitizedPath, error);
-                });
-              } catch (error) {
-                console.log(" -> error removing", sanitizedPath, error);
-              }
-              
-              // update editor state
-              const { current, parts, editorFiles } = traversePath(sanitizedPath);
-              if (!current || !parts || !editorFiles) {
-                console.error("[x] error removing dir, could not traverse path", sanitizedPath);
-                break;
-              }
-              const lastPart = parts[parts.length - 1];
-              if (!lastPart) {
-                console.error("[x] error removing dir, no last part in path", sanitizedPath);
-                break;
-              }
-              delete current.directory[lastPart];
-              useFileSystem.getState().setFiles(editorFiles);
-              break;
-            }
-            case "add_file":
-            case "change": {
-              if (!buffer) {
-                throw new Error("Buffer is undefined");
-              }
-              const isBinary = isBinaryFile(buffer);
-              console.log(` -> Writing ${sanitizedPath} with size ${buffer.byteLength} bytes`);
-              
-              // Check if this change is from a recent editor write
-              const isFromEditor = this.isRecentEditorWrite(sanitizedPath);
-              
-              // propagate to zenfs
-              zenFs.writeFileSync(sanitizedPath, buffer);
-              // update editor state
-              const { current, parts, editorFiles } = traversePath(sanitizedPath);
-              if (!current || !parts || !editorFiles) {
-                console.error("[x] error writing file, could not traverse path", sanitizedPath);
-                break;
-              }
-              const lastPart = parts[parts.length - 1];
-              if (!lastPart) {
-                console.error("[x] error writing file, no last part in path", sanitizedPath);
-                break;
-              }
-              current.directory[lastPart] = {
-                file: {
-                  size: buffer.byteLength,
-                  isBinary
-                }
-              };
-              useFileSystem.getState().setFiles(editorFiles);
-              
-              // Notify subscribers of the file change (only if not from editor)
-              if (!isFromEditor && !isBinary) {
-                console.log(` -> Notifying subscribers of external change to ${sanitizedPath}`);
-                this.notifyFileChange(sanitizedPath);
-              } else if (isFromEditor) {
-                console.log(` -> Skipping notification for ${sanitizedPath} (recent editor write)`);
-              }
-              break;
-            }
-            case "remove_file": {
-              console.log(` -> Removing ${sanitizedPath}`);
-              
-              zenFs.unlinkSync(sanitizedPath);
-              
-              const { current, parts, editorFiles } = traversePath(sanitizedPath);
-              if (!current || !parts || !editorFiles) {
-                console.error("[x] error removing file, could not traverse path", sanitizedPath);
-                break;
-              }
-              const lastPart = parts[parts.length - 1];
-              if (!lastPart) {
-                console.error("[x] error removing file, no last part in path", sanitizedPath);
-                break;
-              }
-              delete current.directory[lastPart];
-              useFileSystem.getState().setFiles(editorFiles);
-              useEditorState.getState().removeTabWithPath(sanitizedPath, -1);
-              break;
-            }
-            case "update_directory": {
-              break;
-            }
-          }
+    if (stats.isFile()) {
+      const buff = await fs.promises.readFile(path);
+      return {
+        file: {
+            contents: buff
         }
-      })
-    )
-  }
+      };
+    }
+      
+    if (stats.isDirectory()) {
+      const entries = await fs.promises.readdir(path);
+      const webContainerTree: FileSystemTree = {};
+      
+      const buildPromises = entries.map(async (entry) => {
+        const fullPath = path === '/' ? `/${entry}` : `${path}/${entry}`;
+        const result = await buildTree(fullPath);
+        return { entry, result };
+      });
 
-  canOpenFile(path: string, allowBinary: boolean = false) {
-    const exists = zenFs.existsSync(path)
-    if (!exists) {
-      return false;
-    }
-    const file = zenFs.readFileSync(path);
-    if (!allowBinary && isBinaryFile(file)) {
-      return false;
-    }
-    return true;
-  }
-  getEditableFileContent(path: string, force: boolean = false) {
-    const exists = zenFs.existsSync(path)
-    if (!exists) {
-      return false;
-    }
-    const stats = zenFs.statSync(path);
-    if (!stats.isFile()) {
-      return false;
-    }
-    // check if file is binary
-    const file = zenFs.readFileSync(path);
-    if (force || !isBinaryFile(file)) {
-      // if the file is empty, return an empty string
-      if (file.byteLength === 0) {
-        return "";
+      const results = await Promise.all(buildPromises);
+      
+      for (const { entry, result } of results) {
+        webContainerTree[entry] = result;
       }
-      return file.toString('utf-8');
-    }
-    return null;
-  }
-  async writeFileAsync(path: string, content: string, context?: { source?: 'editor' | 'external' }) {
-    const container = getWebContainer();
-    if (!container || container.status !== 'ready') {
-      console.error(" -> container not ready, cannot write file", path);
-      return;
+      
+      return {
+        directory: webContainerTree
+      };
     }
     
-    const source = context?.source || 'editor';
-    console.log(" -> writing file from", source, path);
-    
-    // Only record timestamp for actual editor writes
-    if (source === 'editor') {
-      this.editorWriteTimestamps.set(path, Date.now());
-    }
-    
-    await Promise.all([
-      // sync to zenfs
-      zenFs.writeFile(path, content),
-      // sync to webcontainer
-      container.webContainer?.fs.writeFile(path, content)
-    ]);
+    throw new Error(`Unsupported file type at path: ${path}`);
+  };
+
+  console.log("building file tree")
+
+  const dirs = await fs.promises.readdir("/home/workspace"); // TODO: implement projects by instead reading from /<project>/*
+  console.log(" -> ", dirs)
+  const buildPromises = dirs.map(async (dir) => {
+    const result = await buildTree(`/home/workspace/${dir}`);
+    return { dir, result };
+  });
+
+  const results = await Promise.all(buildPromises);
+  
+  const files: FileSystemTree = {};
+  for (const { dir, result } of results) {
+    files[dir] = result;
   }
 
-  private isRecentEditorWrite(path: string): boolean {
-    const timestamp = this.editorWriteTimestamps.get(path);
-    if (!timestamp) return false;
-    
-    const now = Date.now();
-    const isRecent = (now - timestamp) < this.EDITOR_WRITE_GRACE_PERIOD;
-    
-    // Clean up old timestamps
-    if (!isRecent) {
-      this.editorWriteTimestamps.delete(path);
-    }
-    
-    return isRecent;
-  }
-
-  subscribeToFileChange(path: string, callback: FileChangeCallback): () => void {
-    if (!this.fileChangeSubscriptions.has(path)) {
-      this.fileChangeSubscriptions.set(path, new Set());
-    }
-    this.fileChangeSubscriptions.get(path)!.add(callback);
-    
-    // Return unsubscribe function
-    return () => {
-      const callbacks = this.fileChangeSubscriptions.get(path);
-      if (callbacks) {
-        callbacks.delete(callback);
-        if (callbacks.size === 0) {
-          this.fileChangeSubscriptions.delete(path);
-        }
-      }
-    };
-  }
-
-  private notifyFileChange(path: string) {
-    const callbacks = this.fileChangeSubscriptions.get(path);
-    if (callbacks && callbacks.size > 0) {
-      const content = this.getEditableFileContent(path, true);
-      if (content !== null && content !== false) {
-        callbacks.forEach(callback => callback(content as string));
-      }
-    }
-  }
+  return files;
 }
-export const fileSystem = new ZenFileSystemHandler();
-
-function isBinaryFile(buffer: Uint8Array | undefined) {
-  if (buffer === undefined) {
-    return false;
-  }
-
-  return getEncoding(convertToBuffer(buffer), { chunkLength: 100 }) === 'binary';
-}
-function convertToBuffer(view: Uint8Array): Buffer {
-  return Buffer.from(view.buffer, view.byteOffset, view.byteLength);
-}
-// function decodeFileContent(buffer?: Uint8Array) {
-//   if (!buffer || buffer.byteLength === 0) {
-//     return '';
-//   }
-
-//   try {
-//     return utf8TextDecoder.decode(buffer);
-//   } catch (error) {
-//     console.log(error);
-//     return '';
-//   }
-// }

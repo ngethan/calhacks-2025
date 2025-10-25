@@ -2,7 +2,10 @@
 
 import dynamic from "next/dynamic";
 
-const App = dynamic(() => import("@/ide/app"), { ssr: false });
+const MonacoEditor = dynamic(() => import("@/ide/monaco/editor"), { 
+	ssr: false 
+});
+
 export default function IDEPage() {
-	return <App />;
+	return <MonacoEditor />;
 }
