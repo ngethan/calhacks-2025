@@ -9,39 +9,6 @@ import { WebContainer } from "@webcontainer/api";
 import { configure } from "@zenfs/core";
 import zenFs from "@zenfs/core";
 import { IndexedDB } from '@zenfs/dom';
-import { useIDERouter } from "../router";
-
-// File change notification system
-type FileChangeListener = (path: string, content: string) => void;
-const fileChangeListeners = new Map<string, Set<FileChangeListener>>();
-
-export function subscribeToFileChanges(path: string, listener: FileChangeListener) {
-  if (!fileChangeListeners.has(path)) {
-    fileChangeListeners.set(path, new Set());
-  }
-  fileChangeListeners.get(path)!.add(listener);
-  
-  return () => {
-    const listeners = fileChangeListeners.get(path);
-    if (listeners) {
-      listeners.delete(listener);
-      if (listeners.size === 0) {
-        fileChangeListeners.delete(path);
-      }
-    }
-  };
-}
-
-function notifyFileChange(path: string, buffer: Uint8Array) {
-  const listeners = fileChangeListeners.get(path);
-  if (listeners && listeners.size > 0) {
-    // Only notify if the file is text (not binary)
-    if (!isBinaryFile(buffer)) {
-      const content = Buffer.from(buffer).toString('utf-8');
-      listeners.forEach(listener => listener(path, content));
-    }
-  }
-}
 
 // const utf8TextDecoder = new TextDecoder('utf8', { fatal: true });
 const FS_IGNORE_PATHS = ["**/node_modules", ".git"]
@@ -162,10 +129,7 @@ class ZenFileSystemHandler {
               console.error(" -> error adding dir, reached a file when dir was expected??", sanitizedPath, current);
               return { current: undefined, parts: undefined, editorFiles: undefined };
             }
-            const part = parts[i];
-            if (part) {
-              current = current.directory[part] as FSDirectory;
-            }
+            current = current.directory[parts[i]] as FSDirectory;
           }
           return { current, parts, editorFiles };
         }
@@ -184,14 +148,11 @@ class ZenFileSystemHandler {
               // propagate to zenfs
               zenFs.mkdirSync(sanitizedPath);
               const { current, parts, editorFiles } = traversePath(sanitizedPath);
-              if (!current || !parts || parts.length === 0) {
+              if (!current || !parts) {
                 console.error("[x] error adding dir, could not traverse path", sanitizedPath);
                 break;
               }
-              const lastPart = parts[parts.length - 1];
-              if (lastPart) {
-                current.directory[lastPart] = { directory: {}, open: false };
-              }
+              current.directory[parts[parts.length - 1]] = { directory: {}, open: false };
               useFileSystem.getState().setFiles(editorFiles);
               break;
             }
@@ -224,14 +185,11 @@ class ZenFileSystemHandler {
               
               // update editor state
               const { current, parts, editorFiles } = traversePath(sanitizedPath);
-              if (!current || !parts || !editorFiles || parts.length === 0) {
+              if (!current || !parts || !editorFiles) {
                 console.error("[x] error removing dir, could not traverse path", sanitizedPath);
                 break;
               }
-              const lastPart = parts[parts.length - 1];
-              if (lastPart) {
-                delete current.directory[lastPart];
-              }
+              delete current.directory[parts[parts.length - 1]];
               useFileSystem.getState().setFiles(editorFiles);
               break;
             }
@@ -240,33 +198,23 @@ class ZenFileSystemHandler {
               if (!buffer) {
                 throw new Error("Buffer is undefined");
               }
-              const isChange = type === "change";
               const isBinary = isBinaryFile(buffer);
               console.log(` -> Writing ${sanitizedPath} with size ${buffer.byteLength} bytes`);
               // propagate to zenfs
               zenFs.writeFileSync(sanitizedPath, buffer);
               // update editor state
               const { current, parts, editorFiles } = traversePath(sanitizedPath);
-              if (!current || !parts || !editorFiles || parts.length === 0) {
+              if (!current || !parts || !editorFiles) {
                 console.error("[x] error writing file, could not traverse path", sanitizedPath);
                 break;
               }
-              const lastPart = parts[parts.length - 1];
-              if (lastPart) {
-                current.directory[lastPart] = {
-                  file: {
-                    size: buffer.byteLength,
-                    isBinary
-                  }
-                };
-              }
+              current.directory[parts[parts.length - 1]] = {
+                file: {
+                  size: buffer.byteLength,
+                  isBinary
+                }
+              };
               useFileSystem.getState().setFiles(editorFiles);
-              
-              // Notify any listeners (Monaco editors) that this file has changed
-              if (isChange) {
-                notifyFileChange(sanitizedPath, buffer);
-              }
-
               break;
             }
             case "remove_file": {
@@ -275,14 +223,11 @@ class ZenFileSystemHandler {
               zenFs.unlinkSync(sanitizedPath);
               
               const { current, parts, editorFiles } = traversePath(sanitizedPath);
-              if (!current || !parts || !editorFiles || parts.length === 0) {
+              if (!current || !parts || !editorFiles) {
                 console.error("[x] error removing file, could not traverse path", sanitizedPath);
                 break;
               }
-              const lastPart = parts[parts.length - 1];
-              if (lastPart) {
-                delete current.directory[lastPart];
-              }
+              delete current.directory[parts[parts.length - 1]];
               useFileSystem.getState().setFiles(editorFiles);
               useEditorState.getState().removeTabWithPath(sanitizedPath, -1);
               break;
