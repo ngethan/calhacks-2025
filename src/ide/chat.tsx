@@ -121,7 +121,7 @@ export const Chat = () => {
         return;
       }
 
-      await fileSystem.writeFileAsync(normalizedPath, finalContent);
+      await fileSystem.writeFileAsync(normalizedPath, finalContent, { source: 'external' });
       console.log(`[Chat] Applied edit to ${edit.path} (resolved ${normalizedPath})`);
     } catch (error) {
       console.error(`[Chat] Failed to apply edit to ${edit.path}:`, error);

@@ -319,16 +319,20 @@ class ZenFileSystemHandler {
     }
     return null;
   }
-  async writeFileAsync(path: string, content: string) {
+  async writeFileAsync(path: string, content: string, context?: { source?: 'editor' | 'external' }) {
     const container = getWebContainer();
     if (!container || container.status !== 'ready') {
       console.error(" -> container not ready, cannot write file", path);
       return;
     }
-    console.log(" -> writing file from editor", path);
     
-    // Record timestamp of editor write
-    this.editorWriteTimestamps.set(path, Date.now());
+    const source = context?.source || 'editor';
+    console.log(" -> writing file from", source, path);
+    
+    // Only record timestamp for actual editor writes
+    if (source === 'editor') {
+      this.editorWriteTimestamps.set(path, Date.now());
+    }
     
     await Promise.all([
       // sync to zenfs
