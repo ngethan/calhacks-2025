@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { WebContainerProvider } from "@/components/container";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -11,12 +12,14 @@ import { IDEEditor } from "@/ide/editor";
 import { Chat } from "@/ide/chat";
 
 const App = () => {
+  const [showChat, setShowChat] = useState(true);
+
   return (
     <WebContainerProvider>
       <SidebarProvider open={false}>
         <IDESidebar />
         <ResizablePanelGroup direction="horizontal">
-          <ResizablePanel defaultSize={15}>
+          <ResizablePanel defaultSize={15} minSize={12} maxSize={30}>
             <IDESidebarContent />
           </ResizablePanel>
           <ResizableHandle withHandle />
@@ -25,16 +28,20 @@ const App = () => {
               <ResizablePanel>
                 <ResizablePanelGroup direction="horizontal">
                   <ResizablePanel collapsible>
-                    <IDEEditor />
+                    <IDEEditor onOpenChat={() => setShowChat(true)} showChat={showChat} />
                   </ResizablePanel>
                   <ResizableHandle withHandle />
                   <ResizablePanel collapsible defaultSize={0}>
                     <IFrame />
                   </ResizablePanel>
-                  <ResizableHandle withHandle />
-                  <ResizablePanel collapsible defaultSize={25} minSize={20}>
-                    <Chat />
-                  </ResizablePanel>
+                  {showChat && (
+                    <>
+                      <ResizableHandle withHandle />
+                      <ResizablePanel collapsible defaultSize={25} minSize={20}>
+                        <Chat onClose={() => setShowChat(false)} />
+                      </ResizablePanel>
+                    </>
+                  )}
                 </ResizablePanelGroup>
               </ResizablePanel>
               <ResizableHandle withHandle />
