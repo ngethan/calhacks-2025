@@ -12,8 +12,18 @@ import { IndexedDB } from '@zenfs/dom';
 
 // const utf8TextDecoder = new TextDecoder('utf8', { fatal: true });
 const FS_IGNORE_PATHS = ["**/node_modules", ".git"]
+
+type FileChangeCallback = (content: string) => void;
+
 class ZenFileSystemHandler {
-  constructor() {}
+  private fileChangeSubscriptions: Map<string, Set<FileChangeCallback>>;
+  private editorWriteTimestamps: Map<string, number>;
+  private readonly EDITOR_WRITE_GRACE_PERIOD = 1000; // 1 second grace period
+
+  constructor() {
+    this.fileChangeSubscriptions = new Map();
+    this.editorWriteTimestamps = new Map();
+  }
 
   async init()  {
     await configure({
@@ -129,7 +139,12 @@ class ZenFileSystemHandler {
               console.error(" -> error adding dir, reached a file when dir was expected??", sanitizedPath, current);
               return { current: undefined, parts: undefined, editorFiles: undefined };
             }
-            current = current.directory[parts[i]] as FSDirectory;
+            const part = parts[i];
+            if (!part) {
+              console.error(" -> error traversing path, part is undefined", sanitizedPath);
+              return { current: undefined, parts: undefined, editorFiles: undefined };
+            }
+            current = current.directory[part] as FSDirectory;
           }
           return { current, parts, editorFiles };
         }
@@ -148,11 +163,16 @@ class ZenFileSystemHandler {
               // propagate to zenfs
               zenFs.mkdirSync(sanitizedPath);
               const { current, parts, editorFiles } = traversePath(sanitizedPath);
-              if (!current || !parts) {
+              if (!current || !parts || !editorFiles) {
                 console.error("[x] error adding dir, could not traverse path", sanitizedPath);
                 break;
               }
-              current.directory[parts[parts.length - 1]] = { directory: {}, open: false };
+              const lastPart = parts[parts.length - 1];
+              if (!lastPart) {
+                console.error("[x] error adding dir, no last part in path", sanitizedPath);
+                break;
+              }
+              current.directory[lastPart] = { directory: {}, open: false };
               useFileSystem.getState().setFiles(editorFiles);
               break;
             }
@@ -189,7 +209,12 @@ class ZenFileSystemHandler {
                 console.error("[x] error removing dir, could not traverse path", sanitizedPath);
                 break;
               }
-              delete current.directory[parts[parts.length - 1]];
+              const lastPart = parts[parts.length - 1];
+              if (!lastPart) {
+                console.error("[x] error removing dir, no last part in path", sanitizedPath);
+                break;
+              }
+              delete current.directory[lastPart];
               useFileSystem.getState().setFiles(editorFiles);
               break;
             }
@@ -200,6 +225,10 @@ class ZenFileSystemHandler {
               }
               const isBinary = isBinaryFile(buffer);
               console.log(` -> Writing ${sanitizedPath} with size ${buffer.byteLength} bytes`);
+              
+              // Check if this change is from a recent editor write
+              const isFromEditor = this.isRecentEditorWrite(sanitizedPath);
+              
               // propagate to zenfs
               zenFs.writeFileSync(sanitizedPath, buffer);
               // update editor state
@@ -208,13 +237,26 @@ class ZenFileSystemHandler {
                 console.error("[x] error writing file, could not traverse path", sanitizedPath);
                 break;
               }
-              current.directory[parts[parts.length - 1]] = {
+              const lastPart = parts[parts.length - 1];
+              if (!lastPart) {
+                console.error("[x] error writing file, no last part in path", sanitizedPath);
+                break;
+              }
+              current.directory[lastPart] = {
                 file: {
                   size: buffer.byteLength,
                   isBinary
                 }
               };
               useFileSystem.getState().setFiles(editorFiles);
+              
+              // Notify subscribers of the file change (only if not from editor)
+              if (!isFromEditor && !isBinary) {
+                console.log(` -> Notifying subscribers of external change to ${sanitizedPath}`);
+                this.notifyFileChange(sanitizedPath);
+              } else if (isFromEditor) {
+                console.log(` -> Skipping notification for ${sanitizedPath} (recent editor write)`);
+              }
               break;
             }
             case "remove_file": {
@@ -227,7 +269,12 @@ class ZenFileSystemHandler {
                 console.error("[x] error removing file, could not traverse path", sanitizedPath);
                 break;
               }
-              delete current.directory[parts[parts.length - 1]];
+              const lastPart = parts[parts.length - 1];
+              if (!lastPart) {
+                console.error("[x] error removing file, no last part in path", sanitizedPath);
+                break;
+              }
+              delete current.directory[lastPart];
               useFileSystem.getState().setFiles(editorFiles);
               useEditorState.getState().removeTabWithPath(sanitizedPath, -1);
               break;
@@ -278,13 +325,60 @@ class ZenFileSystemHandler {
       console.error(" -> container not ready, cannot write file", path);
       return;
     }
-    console.log(" -> writing file", path, content);
+    console.log(" -> writing file from editor", path);
+    
+    // Record timestamp of editor write
+    this.editorWriteTimestamps.set(path, Date.now());
+    
     await Promise.all([
-      // sync to webcontainer
-      zenFs.writeFile(path, content),
       // sync to zenfs
+      zenFs.writeFile(path, content),
+      // sync to webcontainer
       container.webContainer?.fs.writeFile(path, content)
     ]);
+  }
+
+  private isRecentEditorWrite(path: string): boolean {
+    const timestamp = this.editorWriteTimestamps.get(path);
+    if (!timestamp) return false;
+    
+    const now = Date.now();
+    const isRecent = (now - timestamp) < this.EDITOR_WRITE_GRACE_PERIOD;
+    
+    // Clean up old timestamps
+    if (!isRecent) {
+      this.editorWriteTimestamps.delete(path);
+    }
+    
+    return isRecent;
+  }
+
+  subscribeToFileChange(path: string, callback: FileChangeCallback): () => void {
+    if (!this.fileChangeSubscriptions.has(path)) {
+      this.fileChangeSubscriptions.set(path, new Set());
+    }
+    this.fileChangeSubscriptions.get(path)!.add(callback);
+    
+    // Return unsubscribe function
+    return () => {
+      const callbacks = this.fileChangeSubscriptions.get(path);
+      if (callbacks) {
+        callbacks.delete(callback);
+        if (callbacks.size === 0) {
+          this.fileChangeSubscriptions.delete(path);
+        }
+      }
+    };
+  }
+
+  private notifyFileChange(path: string) {
+    const callbacks = this.fileChangeSubscriptions.get(path);
+    if (callbacks && callbacks.size > 0) {
+      const content = this.getEditableFileContent(path, true);
+      if (content !== null && content !== false) {
+        callbacks.forEach(callback => callback(content as string));
+      }
+    }
   }
 }
 export const fileSystem = new ZenFileSystemHandler();

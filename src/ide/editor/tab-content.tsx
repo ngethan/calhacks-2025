@@ -2,8 +2,10 @@
 
 import { TabsContent } from "@/components/ui/tabs";
 import { fileSystem } from "@/ide/filesystem/zen-fs";
-import { Editor, loader } from "@monaco-editor/react";
+import { Editor, loader, type Monaco } from "@monaco-editor/react";
 import { useTheme } from "next-themes";
+import { useEffect, useRef, useCallback } from "react";
+import { useDebouncedCallback } from "@/lib/utils/debounce-hooks";
 
 loader.init().then((monaco) => {
   monaco.editor.defineTheme('runway-dark', {
@@ -16,14 +18,65 @@ loader.init().then((monaco) => {
     }
   });
 });
+
+type MonacoEditor = Parameters<NonNullable<Parameters<typeof Editor>[0]['onMount']>>[0];
+
 export const EditorTabContent = ({ tab, path, index }: { tab: string, path: string, index: number }) => {
-  const onChange = async (value: string | undefined) => {
-    console.log("[!] -> onChange", value);
-    await fileSystem.writeFileAsync(path, value || "");
-  } /*useDebouncedCallback(async (value: string, path: string) => {
-    await fileSystem.writeFileAsync(path, value);
-  }, 300);*/
+  const editorRef = useRef<MonacoEditor | null>(null);
+  const monacoRef = useRef<Monaco | null>(null);
+  const isUpdatingFromExternal = useRef(false);
+
+  const debouncedWrite = useDebouncedCallback(async (filePath: string, content: string) => {
+    console.log("[!] -> debounced write", filePath);
+    await fileSystem.writeFileAsync(filePath, content);
+  }, 300);
+
+  const onChange = useCallback((value: string | undefined) => {
+    // Ignore changes that come from external file updates
+    if (isUpdatingFromExternal.current) {
+      return;
+    }
+    debouncedWrite(path, value || "");
+  }, [path, debouncedWrite]);
+
+  useEffect(() => {
+    // Subscribe to file system changes for this specific file
+    const unsubscribe = fileSystem.subscribeToFileChange(path, (newContent: string) => {
+      if (editorRef.current && monacoRef.current) {
+        const currentModel = editorRef.current.getModel();
+        if (currentModel) {
+          const currentValue = currentModel.getValue();
+          // Only update if the content is different
+          if (currentValue !== newContent) {
+            console.log(`[!] -> External change detected for ${path}, updating editor`);
+            isUpdatingFromExternal.current = true;
+            
+            // Preserve cursor position and scroll position
+            const position = editorRef.current.getPosition();
+            const scrollTop = editorRef.current.getScrollTop();
+            
+            // Update the model value
+            currentModel.setValue(newContent);
+            
+            // Restore cursor and scroll position
+            if (position) {
+              editorRef.current.setPosition(position);
+            }
+            editorRef.current.setScrollTop(scrollTop);
+            
+            isUpdatingFromExternal.current = false;
+          }
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [path]);
+
   const theme = useTheme();
+  
   return (
     <TabsContent key={tab} value={index + ""} className="mt-0">
       <Editor
@@ -33,9 +86,11 @@ export const EditorTabContent = ({ tab, path, index }: { tab: string, path: stri
         theme={theme.theme === 'dark' ? 'vs-dark' : 'vs-light'}
         onMount={(editor, monaco) => {
           monaco.editor.setTheme('runway-dark');
+          editorRef.current = editor;
+          monacoRef.current = monaco;
         }}
         onChange={onChange}
       />
     </TabsContent>
-  )
-}
+  );
+};
