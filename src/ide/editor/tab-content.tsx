@@ -12,9 +12,14 @@ loader.init().then((monaco) => {
     base: 'vs-dark',
     inherit: true,
     rules: [],
-    // set background to editor-background
     colors: {
-      "editor.background": "#1f1f1f"
+      "editor.background": "#282c34",
+      "editor.foreground": "#abb2bf",
+      "editorLineNumber.foreground": "#5c6370",
+      "editorLineNumber.activeForeground": "#abb2bf",
+      "editorCursor.foreground": "#528bff",
+      "editor.selectionBackground": "#3e4451",
+      "editor.inactiveSelectionBackground": "#3a3f4b",
     }
   });
 });

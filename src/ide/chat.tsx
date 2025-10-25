@@ -46,7 +46,11 @@ const normalizeEditPath = (rawPath: string) => {
   return `/${resolved.join("/")}`;
 };
 
-function MessageContent({ content, onAccept, onReject }: {
+function MessageContent({
+  content,
+  onAccept,
+  onReject,
+}: {
   content: string;
   onAccept?: (edit: FileEdit) => void;
   onReject?: (edit: FileEdit) => void;
@@ -55,23 +59,28 @@ function MessageContent({ content, onAccept, onReject }: {
   const hasEdits = edits.length > 0;
 
   // Remove file_edit tags from display
-  const displayContent = content.replace(/<file_edit>[\s\S]*?<\/file_edit>/g, "").trim();
+  const displayContent = content
+    .replace(/<file_edit>[\s\S]*?<\/file_edit>/g, "")
+    .trim();
 
   return (
     <div className="space-y-3">
       {displayContent && (
         <div className="prose prose-sm dark:prose-invert max-w-none">
-          <pre className="whitespace-pre-wrap font-sans text-sm">{displayContent}</pre>
+          <pre className="whitespace-pre-wrap font-sans text-sm">
+            {displayContent}
+          </pre>
         </div>
       )}
-      {hasEdits && edits.map((edit, idx) => (
-        <DiffViewer
-          key={idx}
-          edit={edit}
-          onAccept={() => onAccept?.(edit)}
-          onReject={() => onReject?.(edit)}
-        />
-      ))}
+      {hasEdits &&
+        edits.map((edit, idx) => (
+          <DiffViewer
+            key={idx}
+            edit={edit}
+            onAccept={() => onAccept?.(edit)}
+            onReject={() => onReject?.(edit)}
+          />
+        ))}
     </div>
   );
 }
@@ -103,12 +112,18 @@ export const Chat = () => {
 
       if (edit.diff) {
         // Apply diff to existing file
-        const fileContent = fileSystem.getEditableFileContent(normalizedPath, true);
-        const currentContent = typeof fileContent === "string" ? fileContent : "";
+        const fileContent = fileSystem.getEditableFileContent(
+          normalizedPath,
+          true
+        );
+        const currentContent =
+          typeof fileContent === "string" ? fileContent : "";
         const patchedContent = applyDiff(currentContent, edit.diff);
 
         if (!patchedContent) {
-          console.error(`[Chat] Failed to apply diff to ${edit.path} (resolved ${normalizedPath})`);
+          console.error(
+            `[Chat] Failed to apply diff to ${edit.path} (resolved ${normalizedPath})`
+          );
           return;
         }
 
@@ -121,8 +136,12 @@ export const Chat = () => {
         return;
       }
 
-      await fileSystem.writeFileAsync(normalizedPath, finalContent, { source: 'external' });
-      console.log(`[Chat] Applied edit to ${edit.path} (resolved ${normalizedPath})`);
+      await fileSystem.writeFileAsync(normalizedPath, finalContent, {
+        source: "external",
+      });
+      console.log(
+        `[Chat] Applied edit to ${edit.path} (resolved ${normalizedPath})`
+      );
     } catch (error) {
       console.error(`[Chat] Failed to apply edit to ${edit.path}:`, error);
     }
@@ -130,7 +149,9 @@ export const Chat = () => {
 
   const handleRejectEdit = (edit: FileEdit) => {
     const normalizedPath = normalizeEditPath(edit.path);
-    console.log(`[Chat] Rejected edit to ${edit.path} (resolved ${normalizedPath})`);
+    console.log(
+      `[Chat] Rejected edit to ${edit.path} (resolved ${normalizedPath})`
+    );
   };
 
   const handleSend = async () => {
@@ -141,11 +162,14 @@ export const Chat = () => {
     // Ensure all messages have simple string content for API compatibility
     // Filter out any malformed messages and convert to plain objects
     const sanitizedMessages = messages
-      .filter(msg => {
+      .filter((msg) => {
         if (!msg || !msg.role || msg.content === undefined) return false;
         // Filter out empty assistant messages (from failed streams)
-        if (msg.role === 'assistant' && (!msg.content || msg.content.trim() === '')) {
-          console.log('[Chat] Filtering out empty assistant message');
+        if (
+          msg.role === "assistant" &&
+          (!msg.content || msg.content.trim() === "")
+        ) {
+          console.log("[Chat] Filtering out empty assistant message");
           return false;
         }
         return true;
@@ -155,31 +179,45 @@ export const Chat = () => {
 
         // Handle various content types
         if (Array.isArray(content)) {
-          console.warn(`[Chat] Message ${idx} has array content, converting to string`);
-          content = content.map(c => typeof c === 'string' ? c : JSON.stringify(c)).join('\n');
-        } else if (typeof content === 'object' && content !== null) {
-          console.warn(`[Chat] Message ${idx} has object content, converting to string`);
+          console.warn(
+            `[Chat] Message ${idx} has array content, converting to string`
+          );
+          content = content
+            .map((c) => (typeof c === "string" ? c : JSON.stringify(c)))
+            .join("\n");
+        } else if (typeof content === "object" && content !== null) {
+          console.warn(
+            `[Chat] Message ${idx} has object content, converting to string`
+          );
           content = JSON.stringify(content);
-        } else if (typeof content !== 'string') {
-          console.warn(`[Chat] Message ${idx} has ${typeof content} content, converting to string`);
+        } else if (typeof content !== "string") {
+          console.warn(
+            `[Chat] Message ${idx} has ${typeof content} content, converting to string`
+          );
           content = String(content);
         }
 
         return {
           role: msg.role as "user" | "assistant" | "system",
-          content: content
+          content: content,
         };
       });
 
     const currentMessages = [...sanitizedMessages, userMessage];
 
-    console.log("[Chat] Sending message. Message count:", currentMessages.length);
-    console.log("[Chat] Final messages being sent:", currentMessages.map(m => ({
-      role: m.role,
-      contentType: typeof m.content,
-      contentLength: m.content.length,
-      contentPreview: m.content.substring(0, 100)
-    })));
+    console.log(
+      "[Chat] Sending message. Message count:",
+      currentMessages.length
+    );
+    console.log(
+      "[Chat] Final messages being sent:",
+      currentMessages.map((m) => ({
+        role: m.role,
+        contentType: typeof m.content,
+        contentLength: m.content.length,
+        contentPreview: m.content.substring(0, 100),
+      }))
+    );
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
@@ -249,7 +287,10 @@ export const Chat = () => {
       console.error("[Chat] Error details:", JSON.stringify(error, null, 2));
       setMessages((prev) => {
         const newMessages = [...prev];
-        if (newMessages[newMessages.length - 1]?.role === "assistant" && !newMessages[newMessages.length - 1]?.content) {
+        if (
+          newMessages[newMessages.length - 1]?.role === "assistant" &&
+          !newMessages[newMessages.length - 1]?.content
+        ) {
           newMessages[newMessages.length - 1] = {
             role: "assistant",
             content: "Sorry, an error occurred. Please try again.",
@@ -280,42 +321,53 @@ export const Chat = () => {
   }, [messages]);
 
   return (
-    <div className="flex flex-col h-full bg-background border-l border-border">
+    <div className="flex flex-col h-full bg-card">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border">
-        <h2 className="font-semibold text-sm">AI Chat</h2>
+      <div className="px-3 py-2.5 border-b border-border/50 flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1">
+          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+          <span className="text-xs font-medium text-foreground">AI Chat</span>
+        </div>
         {getCurrentFile() && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Context: {getCurrentFile()?.path}
-          </p>
+          <span className="text-[10px] text-muted-foreground px-2 py-0.5 bg-muted/50 rounded">
+            {getCurrentFile()?.path.split('/').pop()}
+          </span>
         )}
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto">
-        <div className="space-y-4 py-4 px-4">
+        <div className="space-y-3 p-3">
           {messages.length === 0 && (
-            <div className="text-center text-muted-foreground text-sm py-8">
-              Ask me anything about your code...
+            <div className="flex flex-col items-center justify-center h-full py-12 px-4">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                <div className="w-4 h-4 rounded-full bg-primary/20" />
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Ask me anything about your code
+              </p>
             </div>
           )}
           {messages.map((msg, idx) => (
             <div
               key={idx}
-              className={cn(
-                "space-y-2",
-                msg.role === "user" ? "text-right" : "text-left"
-              )}
+              className="space-y-1.5"
             >
-              <div className="text-xs font-medium text-muted-foreground">
-                {msg.role === "user" ? "You" : "AI"}
+              <div className="flex items-center gap-1.5">
+                <div className={cn(
+                  "w-1 h-1 rounded-full",
+                  msg.role === "user" ? "bg-primary" : "bg-muted-foreground"
+                )} />
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                  {msg.role === "user" ? "You" : "Assistant"}
+                </span>
               </div>
               <div
                 className={cn(
-                  "inline-block max-w-[85%] rounded-lg px-3 py-2 text-sm",
+                  "rounded-md text-xs leading-relaxed",
                   msg.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
+                    ? "bg-primary/10 text-foreground px-3 py-2 ml-2.5"
+                    : "text-foreground/90 ml-2.5"
                 )}
               >
                 {msg.role === "assistant" ? (
@@ -331,9 +383,9 @@ export const Chat = () => {
             </div>
           ))}
           {isStreaming && (
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>AI is thinking...</span>
+            <div className="flex items-center gap-2 text-muted-foreground ml-2.5">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span className="text-xs">Thinking...</span>
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -341,31 +393,33 @@ export const Chat = () => {
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-border">
-        <div className="flex gap-2">
+      <div className="p-3 border-t border-border/50">
+        <div className="relative">
           <Textarea
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask AI to help with your code..."
-            className="min-h-[60px] max-h-[200px] resize-none"
+            className="min-h-[80px] max-h-[200px] resize-none text-xs pr-10 bg-background/50 border-border/50 focus-visible:ring-1 focus-visible:ring-primary/50"
             disabled={isStreaming}
           />
           <Button
             size="icon"
             onClick={() => void handleSend()}
             disabled={!input.trim() || isStreaming}
+            className="absolute right-2 bottom-2 h-7 w-7"
+            variant={input.trim() ? "default" : "ghost"}
           >
             {isStreaming ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <SendHorizontal className="h-4 w-4" />
+              <SendHorizontal className="h-3.5 w-3.5" />
             )}
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground mt-2">
-          Press Enter to send, Shift+Enter for new line
+        <p className="text-[10px] text-muted-foreground mt-2">
+          ⏎ to send · ⇧⏎ for new line
         </p>
       </div>
     </div>

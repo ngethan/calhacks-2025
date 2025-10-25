@@ -82,37 +82,38 @@
 }
 
 .dark {
-	--background: oklch(0.145 0 0);
-	--foreground: oklch(0.985 0 0);
-	--card: oklch(0.205 0 0);
-	--card-foreground: oklch(0.985 0 0);
-	--popover: oklch(0.205 0 0);
-	--popover-foreground: oklch(0.985 0 0);
-	--primary: oklch(0.922 0 0);
-	--primary-foreground: oklch(0.205 0 0);
-	--secondary: oklch(0.269 0 0);
-	--secondary-foreground: oklch(0.985 0 0);
-	--muted: oklch(0.269 0 0);
-	--muted-foreground: oklch(0.708 0 0);
-	--accent: oklch(0.269 0 0);
-	--accent-foreground: oklch(0.985 0 0);
-	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.556 0 0);
-	--chart-1: oklch(0.488 0.243 264.376);
-	--chart-2: oklch(0.696 0.17 162.48);
-	--chart-3: oklch(0.769 0.188 70.08);
-	--chart-4: oklch(0.627 0.265 303.9);
-	--chart-5: oklch(0.645 0.246 16.439);
-	--sidebar: oklch(0.205 0 0);
-	--sidebar-foreground: oklch(0.985 0 0);
-	--sidebar-primary: oklch(0.488 0.243 264.376);
-	--sidebar-primary-foreground: oklch(0.985 0 0);
-	--sidebar-accent: oklch(0.269 0 0);
-	--sidebar-accent-foreground: oklch(0.985 0 0);
-	--sidebar-border: oklch(1 0 0 / 10%);
-	--sidebar-ring: oklch(0.556 0 0);
+	/* One Dark Pro Theme Colors */
+	--background: #282c34; /* Editor background */
+	--foreground: #abb2bf; /* Editor foreground */
+	--card: #21252b; /* Sidebar/Panel background */
+	--card-foreground: #abb2bf;
+	--popover: #21252b;
+	--popover-foreground: #abb2bf;
+	--primary: #61afef; /* Blue accent */
+	--primary-foreground: #282c34;
+	--secondary: #2c313a; /* List selection */
+	--secondary-foreground: #abb2bf;
+	--muted: #3e4452; /* Subtle elements */
+	--muted-foreground: #9da5b4; /* Dimmed text */
+	--accent: #404754; /* Button background */
+	--accent-foreground: #d7dae0;
+	--destructive: #e06c75; /* Red */
+	--border: #181a1f; /* Darker border */
+	--input: #1d1f23; /* Input background */
+	--ring: #61afef; /* Focus ring - blue */
+	--chart-1: #61afef; /* Blue */
+	--chart-2: #98c379; /* Green */
+	--chart-3: #e5c07b; /* Yellow */
+	--chart-4: #c678dd; /* Purple */
+	--chart-5: #e06c75; /* Red */
+	--sidebar: #21252b;
+	--sidebar-foreground: #abb2bf;
+	--sidebar-primary: #61afef;
+	--sidebar-primary-foreground: #282c34;
+	--sidebar-accent: #2c313a;
+	--sidebar-accent-foreground: #d7dae0;
+	--sidebar-border: #181a1f;
+	--sidebar-ring: #61afef;
 }
 
 @layer base {
@@ -136,33 +137,33 @@
 }
 
 .dark .diff-gutter {
-  background: oklch(0.269 0 0);
+  background: #2c313a;
 }
 
 .diff-gutter-normal {
-  color: oklch(0.556 0 0);
+  color: #9da5b4;
 }
 
 .diff-gutter-add {
-  background: oklch(0.6 0.118 184.704 / 0.1);
+  background: rgba(152, 195, 121, 0.1);
 }
 
 .diff-gutter-delete {
-  background: oklch(0.577 0.245 27.325 / 0.1);
+  background: rgba(224, 108, 117, 0.1);
 }
 
 .diff-code-insert {
-  background: oklch(0.6 0.118 184.704 / 0.15);
+  background: rgba(152, 195, 121, 0.15);
 }
 
 .diff-code-delete {
-  background: oklch(0.577 0.245 27.325 / 0.15);
+  background: rgba(224, 108, 117, 0.15);
 }
 
 .dark .diff-code-insert {
-  background: oklch(0.6 0.118 184.704 / 0.2);
+  background: rgba(152, 195, 121, 0.2);
 }
 
 .dark .diff-code-delete {
-  background: oklch(0.577 0.245 27.325 / 0.2);
+  background: rgba(224, 108, 117, 0.2);
 }
