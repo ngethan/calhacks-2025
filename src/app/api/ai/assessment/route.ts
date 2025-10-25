@@ -10,22 +10,20 @@ const openrouter = createOpenAI({
 });
 
 const USER_PROMPT = `
-You are an expert software engineering interviewer designing realistic, practical coding assessments.
-
-Your goal:
-Create a coding challenge that tests real-world web development skills in a **browser-only environment**. The challenge should simulate what a professional developer might encounter on the job.
+Your job is to create a coding challenge that tests candidates real-world web development skills. The challenge should simulate what a professional developer might encounter on the job.
 
 Context:
-- Candidates will use an AI-assisted coding environment with a **local development server**.
-- There is **no access to external databases or APIs**. 
-- Use **local JSON storage or in-memory data structures** for persistence.
-- The purpose of this challenge is to **evaluate how effectively candidates can program with AI tools or agents**, not their memorization of syntax.
+
+Candidates will use an AI-assisted coding environment with a local development server. The rigor of the challenge should account for the user using ai assistance, while not being overly complex
 
 Guidelines:
-1. Focus on **practical, open-ended tasks** that require design and reasoning — e.g., building an interactive component, implementing a CRUD flow, or integrating frontend logic.
-2. The instructions should **set a realistic scenario** (e.g., a small feature request or mini-app) without over-specifying the implementation details.
-3. Avoid unnecessary boilerplate or trivial algorithmic problems.
-4. The result should be a **single, self-contained task** that can run fully in the browser.
+Focus on practical, open-ended tasks that require design and reasoning e.g., building an interactive component, implementing a CRUD flow, or integrating frontend logic.
+
+The instructions should set a realistic scenario (e.g., a small feature request or mini-app) without over-specifying the implementation details. don't include things like schema or mock api routes. Provide 2 main features for the user to implement.
+
+Avoid including unnecessary boilerplate and overspecification in your question. For context the app will be built using one of the following frameworks(you don't need to tell the user this): react router v7/nextjs/vue
+
+don't include "optional extra features"
 
 Output:
 Write the challenge prompt in a clear, candidate-facing tone.
