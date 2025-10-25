@@ -1,12 +1,12 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { generateText } from "ai";
+import { streamText } from "ai";
 import { z } from "zod";
 import { env } from "@/env";
 import { auth } from "@/lib/auth";
 
 const openrouter = createOpenAI({
-	apiKey: env.OPENROUTER_API_KEY,
-	baseURL: "https://openrouter.ai/api/v1",
+  apiKey: env.OPENROUTER_API_KEY,
+  baseURL: "https://openrouter.ai/api/v1",
 });
 
 const USER_PROMPT = `
@@ -25,70 +25,66 @@ Avoid including unnecessary boilerplate and overspecification in your question. 
 
 don't include "optional extra features"
 
+you may use markdown formatting for your response
+
 Output:
 Write the challenge prompt in a clear, candidate-facing tone.
 `;
 
 export async function POST(req: Request) {
-    try {
-        const session = await auth.api.getSession({ headers: req.headers });
+  try {
+    const session = await auth.api.getSession({ headers: req.headers });
 
-        if (!session?.user) {
-            console.log("[Assessment API] Unauthorized request");
-            return new Response("Unauthorized", { status: 401 });
-        }
-
-	console.log("[Assessment API] Generating assessment for user:", session.user.id);
-
-	try {
-		const result = await generateText({
-			model: openrouter.chat("openai/gpt-5"),
-			messages: [
-				{
-					role: "user",
-					content: USER_PROMPT,
-				},
-			],
-			temperature: 0.8,
-		});
-
-		console.log("[Assessment API] Generated assessment:", result.text);
-
-		return new Response(JSON.stringify({ 
-			content: result.text,
-			generatedAt: new Date().toISOString()
-		}), {
-			status: 200,
-			headers: {
-				"Content-Type": "application/json",
-			},
-		});
-	} catch (generateError) {
-		console.error("[Assessment API] generateText error:", generateError);
-		throw generateError;
-	}
-    } catch (error) {
-        console.error("[Assessment API] Error:", error);
-        if (error instanceof z.ZodError) {
-            console.error("[Assessment API] Validation error:", error.errors);
-            return new Response(
-                JSON.stringify({ error: "Invalid request", details: error.errors }),
-                {
-                    status: 400,
-                    headers: { "Content-Type": "application/json" },
-                },
-            );
-        }
-        return new Response(
-            JSON.stringify({
-                error: "Internal Server Error",
-                message: error instanceof Error ? error.message : "Unknown error"
-            }),
-            {
-                status: 500,
-                headers: { "Content-Type": "application/json" },
-            },
-        );
+    if (!session?.user) {
+      console.log("[Assessment API] Unauthorized request");
+      return new Response("Unauthorized", { status: 401 });
     }
-}
 
+    console.log(
+      "[Assessment API] Generating assessment for user:",
+      session.user.id
+    );
+
+    try {
+      const result = streamText({
+        model: openrouter.chat("anthropic/claude-sonnet-4.5"),
+        messages: [
+          {
+            role: "user",
+            content: USER_PROMPT,
+          },
+        ],
+        temperature: 0.8,
+      });
+
+      console.log("[Assessment API] Stream created, returning response");
+
+      return result.toTextStreamResponse();
+    } catch (streamError) {
+      console.error("[Assessment API] streamText error:", streamError);
+      throw streamError;
+    }
+  } catch (error) {
+    console.error("[Assessment API] Error:", error);
+    if (error instanceof z.ZodError) {
+      console.error("[Assessment API] Validation error:", error.errors);
+      return new Response(
+        JSON.stringify({ error: "Invalid request", details: error.errors }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+    return new Response(
+      JSON.stringify({
+        error: "Internal Server Error",
+        message: error instanceof Error ? error.message : "Unknown error",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+}
