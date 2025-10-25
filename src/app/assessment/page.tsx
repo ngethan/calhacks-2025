@@ -96,15 +96,22 @@ export default function AssessmentPage() {
     setGeneratedAt(new Date().toISOString());
 
     try {
+      const requestBody = selectedFramework 
+        ? { framework: selectedFramework }
+        : {};
+      
       const response = await fetch("/api/ai/assessment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to generate assessment");
+        const errorText = await response.text().catch(() => "Unknown error");
+        console.error("Assessment API error:", response.status, errorText);
+        throw new Error(`Failed to generate assessment: ${response.status} - ${errorText}`);
       }
 
       const reader = response.body?.getReader();
@@ -123,14 +130,29 @@ export default function AssessmentPage() {
       }
     } catch (error) {
       console.error("Error loading assessment:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      alert(`Failed to load assessment: ${errorMessage}\n\nPlease check that you're logged in and try again.`);
     } finally {
       setIsStreaming(false);
     }
   };
 
-  const handleStartExam = () => {
-    // Will be implemented later
-    console.log("Starting exam with framework:", selectedFramework);
+  const handleStartExam = async () => {
+    if (!selectedFramework) {
+      alert("Please select a framework first");
+      return;
+    }
+
+    // Store challenge and framework immediately
+    localStorage.setItem("currentChallenge", assessmentContent);
+    localStorage.setItem("currentFramework", selectedFramework);
+    localStorage.setItem("rubricGenerating", "true");
+
+    console.log("🚀 Navigating to IDE...");
+    console.log("Rubric will be generated after IDE loads");
+
+    // Navigate immediately - rubric will be generated from IDE
+    window.location.href = "/ide";
   };
 
   return (

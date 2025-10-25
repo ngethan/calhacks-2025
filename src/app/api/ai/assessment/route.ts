@@ -9,19 +9,23 @@ const openrouter = createOpenAI({
   baseURL: "https://openrouter.ai/api/v1",
 });
 
-const USER_PROMPT = `
+const requestSchema = z.object({
+  framework: z.enum(["react-router-v7", "nextjs"]).optional(),
+});
+
+const getPrompt = (framework?: string) => `
 Your job is to create a coding challenge that tests candidates real-world web development skills. The challenge should simulate what a professional developer might encounter on the job.
 
 Context:
 
-Candidates will use an AI-assisted coding environment with a local development server. The rigor of the challenge should account for the user using ai assistance, while not being overly complex
+Candidates will use an AI-assisted coding environment with a local development server. The rigor of the challenge should account for the user using ai assistance, while not being overly complex${framework ? `\n\nThe candidate will be using ${framework === "react-router-v7" ? "React Router v7" : "Next.js"} for this challenge.` : ""}
 
 Guidelines:
 Focus on practical, open-ended tasks that require design and reasoning e.g., building an interactive component, implementing a CRUD flow, or integrating frontend logic.
 
 The instructions should set a realistic scenario (e.g., a small feature request or mini-app) without over-specifying the implementation details. don't include things like schema or mock api routes. Provide 2 main features for the user to implement.
 
-Avoid including unnecessary boilerplate and overspecification in your question. For context the app will be built using one of the following frameworks(you don't need to tell the user this): react router v7/nextjs/vue
+Avoid including unnecessary boilerplate and overspecification in your question.${framework ? ` Keep in mind the candidate will be using ${framework === "react-router-v7" ? "React Router v7" : "Next.js"}.` : " For context the app will be built using one of the following frameworks(you don't need to tell the user this): react router v7/nextjs/vue"}
 
 don't include "optional extra features"
 
@@ -37,12 +41,23 @@ export async function POST(req: Request) {
 
     if (!session?.user) {
       console.log("[Assessment API] Unauthorized request");
-      return new Response("Unauthorized", { status: 401 });
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Please log in to access this feature" }),
+        { 
+          status: 401,
+          headers: { "Content-Type": "application/json" }
+        }
+      );
     }
+
+    const body = await req.json().catch(() => ({}));
+    const { framework } = requestSchema.parse(body);
 
     console.log(
       "[Assessment API] Generating assessment for user:",
-      session.user.id
+      session.user.id,
+      "with framework:",
+      framework || "any"
     );
 
     try {
@@ -51,7 +66,7 @@ export async function POST(req: Request) {
         messages: [
           {
             role: "user",
-            content: USER_PROMPT,
+            content: getPrompt(framework),
           },
         ],
         temperature: 0.8,
