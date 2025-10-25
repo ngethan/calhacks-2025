@@ -8,6 +8,7 @@ import { IFrame } from "@/ide/iframe";
 import { IDESidebar } from "@/ide/sidebar";
 import { IDESidebarContent } from "@/ide/sidebar/content";
 import { IDEEditor } from "@/ide/editor";
+import { Chat } from "@/ide/chat";
 
 const App = () => {
   return (
@@ -29,6 +30,10 @@ const App = () => {
                   <ResizableHandle withHandle />
                   <ResizablePanel collapsible defaultSize={0}>
                     <IFrame />
+                  </ResizablePanel>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel collapsible defaultSize={25} minSize={20}>
+                    <Chat />
                   </ResizablePanel>
                 </ResizablePanelGroup>
               </ResizablePanel>

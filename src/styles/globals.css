@@ -123,3 +123,46 @@
     @apply bg-background text-foreground;
 	}
 }
+
+/* Diff Viewer Custom Styles */
+.diff-view {
+  font-size: 12px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.diff-gutter {
+  background: oklch(0.97 0 0);
+  user-select: none;
+}
+
+.dark .diff-gutter {
+  background: oklch(0.269 0 0);
+}
+
+.diff-gutter-normal {
+  color: oklch(0.556 0 0);
+}
+
+.diff-gutter-add {
+  background: oklch(0.6 0.118 184.704 / 0.1);
+}
+
+.diff-gutter-delete {
+  background: oklch(0.577 0.245 27.325 / 0.1);
+}
+
+.diff-code-insert {
+  background: oklch(0.6 0.118 184.704 / 0.15);
+}
+
+.diff-code-delete {
+  background: oklch(0.577 0.245 27.325 / 0.15);
+}
+
+.dark .diff-code-insert {
+  background: oklch(0.6 0.118 184.704 / 0.2);
+}
+
+.dark .diff-code-delete {
+  background: oklch(0.577 0.245 27.325 / 0.2);
+}
