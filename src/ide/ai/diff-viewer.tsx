@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Check, X } from "lucide-react";
+import { Check, X, ChevronDown, ChevronRight } from "lucide-react";
 import type { FileEdit } from "./diff-utils";
 
 type DiffViewerProps = {
@@ -72,6 +72,7 @@ function parseDiffToLines(diffText: string): DiffLine[] {
 
 export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
   const [status, setStatus] = useState<"pending" | "accepted" | "rejected">("pending");
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const diffLines = useMemo(() => {
     if (!edit.diff) return [];
@@ -96,10 +97,74 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
   // If it's a full content replacement, show a simple view
   if (edit.content && !edit.diff) {
     return (
+      <div className="border border-border rounded-lg overflow-hidden bg-muted/50">
+        <div className="flex items-start justify-between gap-2 p-3 pb-2">
+          <div className="flex flex-col gap-2 flex-1 min-w-0">
+            <span className="text-xs font-medium text-muted-foreground break-all">
+              {edit.path} (full file replacement)
+            </span>
+            {status === "pending" ? (
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2"
+                  onClick={handleAccept}
+                >
+                  <Check className="h-3 w-3 mr-1" />
+                  Accept
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2"
+                  onClick={handleReject}
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Reject
+                </Button>
+              </div>
+            ) : (
+              <span className={`text-xs font-medium ${status === "accepted" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                {status === "accepted" ? "✓ Accepted" : "✗ Rejected"}
+              </span>
+            )}
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 w-6 p-0 flex-shrink-0"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+          >
+            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </Button>
+        </div>
+        {!isCollapsed && (
+          <pre className="text-xs bg-background p-2 mx-3 mb-3 rounded overflow-x-auto max-h-[300px]">
+            <code>{edit.content}</code>
+          </pre>
+        )}
+      </div>
+    );
+  }
+
+  // Show diff view
+  if (diffLines.length === 0) {
+    return (
       <div className="border border-border rounded-lg p-3 bg-muted/50">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-muted-foreground">
-            {edit.path} (full file replacement)
+        <p className="text-xs text-muted-foreground">
+          Unable to parse diff for {edit.path}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border border-border rounded-lg overflow-hidden bg-background">
+      <div className="flex items-start justify-between gap-2 px-3 py-2 bg-muted/50 border-b border-border">
+        <div className="flex flex-col gap-2 flex-1 min-w-0">
+          <span className="text-xs font-medium text-muted-foreground break-all">
+            {edit.path}
           </span>
           {status === "pending" ? (
             <div className="flex gap-2">
@@ -128,97 +193,57 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
             </span>
           )}
         </div>
-        <pre className="text-xs bg-background p-2 rounded overflow-x-auto max-h-[300px]">
-          <code>{edit.content}</code>
-        </pre>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-6 w-6 p-0 flex-shrink-0"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+        >
+          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </Button>
       </div>
-    );
-  }
-
-  // Show diff view
-  if (diffLines.length === 0) {
-    return (
-      <div className="border border-border rounded-lg p-3 bg-muted/50">
-        <p className="text-xs text-muted-foreground">
-          Unable to parse diff for {edit.path}
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="border border-border rounded-lg overflow-hidden bg-background">
-      <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border">
-        <span className="text-xs font-medium text-muted-foreground">
-          {edit.path}
-        </span>
-        {status === "pending" ? (
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 px-2"
-              onClick={handleAccept}
-            >
-              <Check className="h-3 w-3 mr-1" />
-              Accept
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 px-2"
-              onClick={handleReject}
-            >
-              <X className="h-3 w-3 mr-1" />
-              Reject
-            </Button>
-          </div>
-        ) : (
-          <span className={`text-xs font-medium ${status === "accepted" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-            {status === "accepted" ? "✓ Accepted" : "✗ Rejected"}
-          </span>
-        )}
-      </div>
-      <div className="overflow-x-auto max-h-[400px] overflow-y-auto font-mono">
-        <table className="w-full text-xs border-collapse">
-          <tbody>
-            {diffLines.map((line, idx) => (
-              <tr
-                key={idx}
-                className={
-                  line.type === "add"
-                    ? "bg-green-500/10"
-                    : line.type === "delete"
-                    ? "bg-red-500/10"
-                    : ""
-                }
-              >
-                <td className="w-10 px-2 py-0 text-right text-muted-foreground select-none border-r border-border bg-muted/30">
-                  {line.oldLineNumber || ""}
-                </td>
-                <td className="w-10 px-2 py-0 text-right text-muted-foreground select-none border-r border-border bg-muted/30">
-                  {line.newLineNumber || ""}
-                </td>
-                <td className="px-3 py-0">
-                  <pre className="inline">
-                    <code
-                      className={
-                        line.type === "add"
-                          ? "text-green-600 dark:text-green-400"
-                          : line.type === "delete"
-                          ? "text-red-600 dark:text-red-400"
-                          : ""
-                      }
-                    >
-                      {line.content}
-                    </code>
-                  </pre>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {!isCollapsed && (
+        <div className="overflow-x-auto max-h-[400px] overflow-y-auto font-mono">
+          <table className="w-full text-xs border-collapse">
+            <tbody>
+              {diffLines.map((line, idx) => (
+                <tr
+                  key={idx}
+                  className={
+                    line.type === "add"
+                      ? "bg-green-500/10"
+                      : line.type === "delete"
+                      ? "bg-red-500/10"
+                      : ""
+                  }
+                >
+                  <td className="w-10 px-2 py-0 text-right text-muted-foreground select-none border-r border-border bg-muted/30">
+                    {line.oldLineNumber || ""}
+                  </td>
+                  <td className="w-10 px-2 py-0 text-right text-muted-foreground select-none border-r border-border bg-muted/30">
+                    {line.newLineNumber || ""}
+                  </td>
+                  <td className="px-3 py-0">
+                    <pre className="inline">
+                      <code
+                        className={
+                          line.type === "add"
+                            ? "text-green-600 dark:text-green-400"
+                            : line.type === "delete"
+                            ? "text-red-600 dark:text-red-400"
+                            : ""
+                        }
+                      >
+                        {line.content}
+                      </code>
+                    </pre>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

@@ -121,7 +121,7 @@ export const FileTreeNode: React.FC<FileTreeNodeProps> = ({ name, node, level, f
       >
         {getChevron()}
         {getIcon()}
-        <span className="ml-1">{name}</span>
+        <span className="ml-1 text-xs truncate">{name}</span>
       </div>
       {isOpen && 'directory' in node && (
         <div>
@@ -140,11 +140,13 @@ export const FilesPage = () => {
 
   return (
     <div className="group bg-sidebar p-2 font-mono text-sm h-full overflow-auto">
-      <h2 className="font-semibold font-sans mb-2">EXPLORER</h2>
+      <h2 className="font-semibold font-sans mb-2 text-xs uppercase text-muted-foreground">Explorer</h2>
       <ScrollArea className="h-[93vh]">
-        {sorted.map(([name, node]) => (
-          <FileTreeNode key={name} name={name} node={node} level={0} fullPath={"/" + name} />
-        ))}
+        <div className="min-w-0">
+          {sorted.map(([name, node]) => (
+            <FileTreeNode key={name} name={name} node={node} level={0} fullPath={"/" + name} />
+          ))}
+        </div>
       </ScrollArea>
     </div>
   );
