@@ -1,4 +1,7 @@
-export function bufferWatchEvents<T extends unknown[]>(timeInMs: number, cb: (events: T[]) => unknown) {
+export function bufferWatchEvents<T extends unknown[]>(
+  timeInMs: number,
+  cb: (events: T[]) => unknown,
+) {
   let timeoutId: number | undefined;
   let events: T[] = [];
 
@@ -27,4 +30,3 @@ export function bufferWatchEvents<T extends unknown[]>(timeInMs: number, cb: (ev
     }
   };
 }
-

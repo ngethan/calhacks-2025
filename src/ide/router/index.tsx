@@ -5,9 +5,9 @@ export type Page = {
   name: string;
   icon: React.ElementType;
   bottom?: boolean;
-}
+};
 export type AllPages = "files" | "search" | "settings";
-export const pages: { [key in AllPages]: Page} = {
+export const pages: { [key in AllPages]: Page } = {
   files: {
     name: "Files",
     icon: FilesIcon,
@@ -20,18 +20,15 @@ export const pages: { [key in AllPages]: Page} = {
     name: "Settings",
     icon: SettingsIcon,
     bottom: true,
-  }
-}
+  },
+};
 
 type IDERouterState = {
   page: AllPages;
   setPage: (page: AllPages) => void;
-}
+};
 
-export const useIDERouter = create<IDERouterState>()(
-  (set) => ({
-    page: "files",
-    setPage: (page) => set({ page })
-  })
-)
-
+export const useIDERouter = create<IDERouterState>()((set) => ({
+  page: "files",
+  setPage: (page) => set({ page }),
+}));

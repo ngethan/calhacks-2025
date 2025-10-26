@@ -6,10 +6,10 @@ import { useIDERouter } from "@/ide/router";
 export const IDESidebarContent = () => {
   const page = useIDERouter((state) => state.page);
   return (
-    <div className="bg-sidebar h-full">
+    <div className="h-full bg-sidebar">
       {page === "files" && <FilesPage />}
       {page === "search" && <SearchPage />}
       {page === "settings" && <SettingsPage />}
     </div>
-  )
-}
+  );
+};

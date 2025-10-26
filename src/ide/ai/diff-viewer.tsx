@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Check, X, ChevronDown, ChevronRight } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import type { FileEdit } from "./diff-utils";
 
 type DiffViewerProps = {
@@ -20,7 +20,7 @@ type DiffLine = {
 
 function parseDiffToLines(diffText: string): DiffLine[] {
   const lines: DiffLine[] = [];
-  const diffLines = diffText.split('\n');
+  const diffLines = diffText.split("\n");
 
   let oldLine = 0;
   let newLine = 0;
@@ -28,41 +28,41 @@ function parseDiffToLines(diffText: string): DiffLine[] {
 
   for (const line of diffLines) {
     // Parse hunk header @@ -old +new @@
-    if (line.startsWith('@@')) {
+    if (line.startsWith("@@")) {
       const match = line.match(/@@ -(\d+),?\d* \+(\d+),?\d* @@/);
       if (match) {
-        oldLine = parseInt(match[1] || '0');
-        newLine = parseInt(match[2] || '0');
+        oldLine = Number.parseInt(match[1] || "0");
+        newLine = Number.parseInt(match[2] || "0");
         inHunk = true;
       }
       continue;
     }
 
     // Skip file headers
-    if (line.startsWith('---') || line.startsWith('+++')) {
+    if (line.startsWith("---") || line.startsWith("+++")) {
       continue;
     }
 
     if (!inHunk) continue;
 
-    if (line.startsWith('+')) {
+    if (line.startsWith("+")) {
       lines.push({
-        type: 'add',
+        type: "add",
         newLineNumber: newLine++,
-        content: line.substring(1)
+        content: line.substring(1),
       });
-    } else if (line.startsWith('-')) {
+    } else if (line.startsWith("-")) {
       lines.push({
-        type: 'delete',
+        type: "delete",
         oldLineNumber: oldLine++,
-        content: line.substring(1)
+        content: line.substring(1),
       });
-    } else if (line.startsWith(' ')) {
+    } else if (line.startsWith(" ")) {
       lines.push({
-        type: 'normal',
+        type: "normal",
         oldLineNumber: oldLine++,
         newLineNumber: newLine++,
-        content: line.substring(1)
+        content: line.substring(1),
       });
     }
   }
@@ -71,7 +71,9 @@ function parseDiffToLines(diffText: string): DiffLine[] {
 }
 
 export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
-  const [status, setStatus] = useState<"pending" | "accepted" | "rejected">("pending");
+  const [status, setStatus] = useState<"pending" | "accepted" | "rejected">(
+    "pending",
+  );
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const diffLines = useMemo(() => {
@@ -97,10 +99,10 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
   // If it's a full content replacement, show a simple view
   if (edit.content && !edit.diff) {
     return (
-      <div className="border border-border rounded-lg overflow-hidden bg-muted/50">
+      <div className="overflow-hidden rounded-lg border border-border bg-muted/50">
         <div className="flex items-start justify-between gap-2 p-3 pb-2">
-          <div className="flex flex-col gap-2 flex-1 min-w-0">
-            <span className="text-xs font-medium text-muted-foreground break-all">
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <span className="break-all font-medium text-muted-foreground text-xs">
               {edit.path} (full file replacement)
             </span>
             {status === "pending" ? (
@@ -111,7 +113,7 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
                   className="h-7 px-2"
                   onClick={handleAccept}
                 >
-                  <Check className="h-3 w-3 mr-1" />
+                  <Check className="mr-1 h-3 w-3" />
                   Accept
                 </Button>
                 <Button
@@ -120,12 +122,14 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
                   className="h-7 px-2"
                   onClick={handleReject}
                 >
-                  <X className="h-3 w-3 mr-1" />
+                  <X className="mr-1 h-3 w-3" />
                   Reject
                 </Button>
               </div>
             ) : (
-              <span className={`text-xs font-medium ${status === "accepted" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+              <span
+                className={`font-medium text-xs ${status === "accepted" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+              >
                 {status === "accepted" ? "✓ Accepted" : "✗ Rejected"}
               </span>
             )}
@@ -133,14 +137,18 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0 flex-shrink-0"
+            className="h-6 w-6 flex-shrink-0 p-0"
             onClick={() => setIsCollapsed(!isCollapsed)}
           >
-            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
           </Button>
         </div>
         {!isCollapsed && (
-          <pre className="text-xs bg-background p-2 mx-3 mb-3 rounded overflow-x-auto max-h-[300px]">
+          <pre className="mx-3 mb-3 max-h-[300px] overflow-x-auto rounded bg-background p-2 text-xs">
             <code>{edit.content}</code>
           </pre>
         )}
@@ -151,8 +159,8 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
   // Show diff view
   if (diffLines.length === 0) {
     return (
-      <div className="border border-border rounded-lg p-3 bg-muted/50">
-        <p className="text-xs text-muted-foreground">
+      <div className="rounded-lg border border-border bg-muted/50 p-3">
+        <p className="text-muted-foreground text-xs">
           Unable to parse diff for {edit.path}
         </p>
       </div>
@@ -160,10 +168,10 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
   }
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden bg-background">
-      <div className="flex items-start justify-between gap-2 px-3 py-2 bg-muted/50 border-b border-border">
-        <div className="flex flex-col gap-2 flex-1 min-w-0">
-          <span className="text-xs font-medium text-muted-foreground break-all">
+    <div className="overflow-hidden rounded-lg border border-border bg-background">
+      <div className="flex items-start justify-between gap-2 border-border border-b bg-muted/50 px-3 py-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <span className="break-all font-medium text-muted-foreground text-xs">
             {edit.path}
           </span>
           {status === "pending" ? (
@@ -174,7 +182,7 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
                 className="h-7 px-2"
                 onClick={handleAccept}
               >
-                <Check className="h-3 w-3 mr-1" />
+                <Check className="mr-1 h-3 w-3" />
                 Accept
               </Button>
               <Button
@@ -183,12 +191,14 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
                 className="h-7 px-2"
                 onClick={handleReject}
               >
-                <X className="h-3 w-3 mr-1" />
+                <X className="mr-1 h-3 w-3" />
                 Reject
               </Button>
             </div>
           ) : (
-            <span className={`text-xs font-medium ${status === "accepted" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+            <span
+              className={`font-medium text-xs ${status === "accepted" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+            >
               {status === "accepted" ? "✓ Accepted" : "✗ Rejected"}
             </span>
           )}
@@ -196,15 +206,19 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
         <Button
           size="sm"
           variant="ghost"
-          className="h-6 w-6 p-0 flex-shrink-0"
+          className="h-6 w-6 flex-shrink-0 p-0"
           onClick={() => setIsCollapsed(!isCollapsed)}
         >
-          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          {isCollapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronDown className="h-4 w-4" />
+          )}
         </Button>
       </div>
       {!isCollapsed && (
-        <div className="overflow-x-auto max-h-[400px] overflow-y-auto font-mono">
-          <table className="w-full text-xs border-collapse">
+        <div className="max-h-[400px] overflow-x-auto overflow-y-auto font-mono">
+          <table className="w-full border-collapse text-xs">
             <tbody>
               {diffLines.map((line, idx) => (
                 <tr
@@ -213,14 +227,14 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
                     line.type === "add"
                       ? "bg-green-500/10"
                       : line.type === "delete"
-                      ? "bg-red-500/10"
-                      : ""
+                        ? "bg-red-500/10"
+                        : ""
                   }
                 >
-                  <td className="w-10 px-2 py-0 text-right text-muted-foreground select-none border-r border-border bg-muted/30">
+                  <td className="w-10 select-none border-border border-r bg-muted/30 px-2 py-0 text-right text-muted-foreground">
                     {line.oldLineNumber || ""}
                   </td>
-                  <td className="w-10 px-2 py-0 text-right text-muted-foreground select-none border-r border-border bg-muted/30">
+                  <td className="w-10 select-none border-border border-r bg-muted/30 px-2 py-0 text-right text-muted-foreground">
                     {line.newLineNumber || ""}
                   </td>
                   <td className="px-3 py-0">
@@ -230,8 +244,8 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
                           line.type === "add"
                             ? "text-green-600 dark:text-green-400"
                             : line.type === "delete"
-                            ? "text-red-600 dark:text-red-400"
-                            : ""
+                              ? "text-red-600 dark:text-red-400"
+                              : ""
                         }
                       >
                         {line.content}

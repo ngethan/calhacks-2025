@@ -1,6 +1,6 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import { persist, createJSONStorage } from "zustand/middleware";
 
 export type Message = {
   role: "user" | "assistant" | "system";
@@ -65,7 +65,8 @@ export const useChatStore = create<ChatState>()(
 
             // If we deleted the active session, switch to another one
             if (state.activeSessionId === id) {
-              state.activeSessionId = state.sessions.length > 0 ? state.sessions[0]!.id : null;
+              state.activeSessionId =
+                state.sessions.length > 0 ? state.sessions[0]?.id : null;
             }
           }
         });
@@ -123,6 +124,6 @@ export const useChatStore = create<ChatState>()(
     {
       name: "chat-sessions-storage",
       storage: createJSONStorage(() => localStorage),
-    }
-  )
+    },
+  ),
 );

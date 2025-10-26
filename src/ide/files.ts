@@ -1,5 +1,5 @@
 export const files = {
-  'index.js': {
+  "index.js": {
     file: {
       contents: `
 import express from 'express';
@@ -15,7 +15,7 @@ app.listen(port, () => {
 });`,
     },
   },
-  'package.json': {
+  "package.json": {
     file: {
       contents: `
         {

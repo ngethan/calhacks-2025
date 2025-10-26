@@ -1,22 +1,29 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import type { PortListener, ServerReadyListener, PreviewMessageListener, ErrorListener, WebContainerProcess } from '@webcontainer/api';
-import { WebContainer } from '@webcontainer/api';
-import { fileSystem } from '@/ide/filesystem/zen-fs';
+import { fileSystem } from "@/ide/filesystem/zen-fs";
+import type {
+  ErrorListener,
+  PortListener,
+  PreviewMessageListener,
+  ServerReadyListener,
+  WebContainerProcess,
+} from "@webcontainer/api";
+import { WebContainer } from "@webcontainer/api";
+import type React from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
-type WebContainerStatus = 'booting' | 'ready' | 'error';
+type WebContainerStatus = "booting" | "ready" | "error";
 
 // Add this new type mapping
 type WebContainerEventMap = {
   // webcontainer listeners
-  'port': PortListener;
-  'server-ready': ServerReadyListener;
-  'preview-message': PreviewMessageListener;
-  'error': ErrorListener;
+  port: PortListener;
+  "server-ready": ServerReadyListener;
+  "preview-message": PreviewMessageListener;
+  error: ErrorListener;
 
   // our listeners
-  'shell-output': (data: string) => void;
+  "shell-output": (data: string) => void;
 };
 
 // Add type for listener with ID
@@ -26,7 +33,9 @@ type ListenerEntry<T> = {
 };
 
 type Listeners = {
-  [key in keyof WebContainerEventMap]: ListenerEntry<WebContainerEventMap[key]>[];
+  [key in keyof WebContainerEventMap]: ListenerEntry<
+    WebContainerEventMap[key]
+  >[];
 };
 
 export const WebContainerContext = createContext<{
@@ -36,7 +45,7 @@ export const WebContainerContext = createContext<{
   shellProcess: WebContainerProcess | null;
   addListener: <T extends keyof WebContainerEventMap>(
     event: T,
-    callback: WebContainerEventMap[T]
+    callback: WebContainerEventMap[T],
   ) => string;
   removeListener: (event: keyof WebContainerEventMap, id: string) => void;
 } | null>(null);
@@ -45,96 +54,119 @@ export const WebContainerContext = createContext<{
 let globalWebContainerInstance: {
   webContainer: WebContainer | null;
   status: WebContainerStatus;
-  addListener: <T extends keyof WebContainerEventMap>(event: T, callback: WebContainerEventMap[T]) => string;
+  addListener: <T extends keyof WebContainerEventMap>(
+    event: T,
+    callback: WebContainerEventMap[T],
+  ) => string;
   removeListener: (event: keyof WebContainerEventMap, id: string) => void;
 } | null = null;
 
-export const WebContainerProvider = ({ children }: { children: React.ReactNode }) => {
+export const WebContainerProvider = ({
+  children,
+}: { children: React.ReactNode }) => {
   const [webContainer, setWebContainer] = useState<WebContainer | null>(null);
   const listeners = useRef<Listeners>({
-    'port': [],
-    'server-ready': [],
-    'preview-message': [],
-    'error': [],
-    'shell-output': [],
+    port: [],
+    "server-ready": [],
+    "preview-message": [],
+    error: [],
+    "shell-output": [],
   });
-  const status = useRef<WebContainerStatus>('booting');
-  const [shellProcess, setShellProcess] = useState<WebContainerProcess | null>(null);
+  const status = useRef<WebContainerStatus>("booting");
+  const [shellProcess, setShellProcess] = useState<WebContainerProcess | null>(
+    null,
+  );
 
   useEffect(() => {
-    if (status.current === 'booting') {
-      status.current = 'ready';
+    if (status.current === "booting") {
+      status.current = "ready";
       fileSystem.init().then(() => {
-        WebContainer.boot({ workdirName: "workspace" }).then(async (instance) => {
-          await fileSystem.mountWebContainer(instance);
-          
-          setWebContainer(instance);
-          instance.on('port', (port, type, url) => {
-            listeners.current.port.forEach(({ callback }) => callback(port, type, url))
-          });
-          instance.on('server-ready', (port, url) => {
-            listeners.current['server-ready'].forEach(({ callback }) => callback(port, url))
-          });
-          instance.on('preview-message', (message) => {
-            listeners.current['preview-message'].forEach(({ callback }) => callback(message))
-          });
-          instance.on('error', (error) => {
-            listeners.current['error'].forEach(({ callback }) => callback(error))
-          });
+        WebContainer.boot({ workdirName: "workspace" }).then(
+          async (instance) => {
+            await fileSystem.mountWebContainer(instance);
 
+            setWebContainer(instance);
+            instance.on("port", (port, type, url) => {
+              listeners.current.port.forEach(({ callback }) =>
+                callback(port, type, url),
+              );
+            });
+            instance.on("server-ready", (port, url) => {
+              listeners.current["server-ready"].forEach(({ callback }) =>
+                callback(port, url),
+              );
+            });
+            instance.on("preview-message", (message) => {
+              listeners.current["preview-message"].forEach(({ callback }) =>
+                callback(message),
+              );
+            });
+            instance.on("error", (error) => {
+              listeners.current.error.forEach(({ callback }) =>
+                callback(error),
+              );
+            });
 
-          const shellProcess = await instance.spawn('jsh', {
-            terminal: {
-              cols: 80, // default for now
-              rows: 12,
-            },
-          });
-          setShellProcess(shellProcess);
-
-          shellProcess.output.pipeTo(
-            new WritableStream({
-              write(data) {
-                listeners.current['shell-output'].forEach(({ callback }) => callback(data))
+            const shellProcess = await instance.spawn("jsh", {
+              terminal: {
+                cols: 80, // default for now
+                rows: 12,
               },
-            })
-          );
+            });
+            setShellProcess(shellProcess);
 
-          // Set the global instance
-          globalWebContainerInstance = {
-            webContainer: instance,
-            status: status.current,
-            addListener,
-            removeListener,
-          };
-        });
-      })
+            shellProcess.output.pipeTo(
+              new WritableStream({
+                write(data) {
+                  listeners.current["shell-output"].forEach(({ callback }) =>
+                    callback(data),
+                  );
+                },
+              }),
+            );
+
+            // Set the global instance
+            globalWebContainerInstance = {
+              webContainer: instance,
+              status: status.current,
+              addListener,
+              removeListener,
+            };
+          },
+        );
+      });
     }
   }, []);
 
   // Add the addListener and removeListener functions
   const addListener = <T extends keyof WebContainerEventMap>(
     event: T,
-    callback: WebContainerEventMap[T]
+    callback: WebContainerEventMap[T],
   ): string => {
     const id = crypto.randomUUID();
     listeners.current[event].push({ id, callback: callback });
     return id;
   };
-  const removeListener = <T extends keyof WebContainerEventMap>(event: T, id: string) => {
+  const removeListener = <T extends keyof WebContainerEventMap>(
+    event: T,
+    id: string,
+  ) => {
     listeners.current[event] = listeners.current[event].filter(
-      (listener) => listener.id !== id
+      (listener) => listener.id !== id,
     ) as Listeners[T];
   };
 
   return (
-    <WebContainerContext.Provider value={{
-      webContainer,
-      status: status.current,
-      listeners,
-      shellProcess,
-      addListener,
-      removeListener
-    }}>
+    <WebContainerContext.Provider
+      value={{
+        webContainer,
+        status: status.current,
+        listeners,
+        shellProcess,
+        addListener,
+        removeListener,
+      }}
+    >
       {children}
     </WebContainerContext.Provider>
   );
@@ -146,7 +178,9 @@ export const WebContainerProvider = ({ children }: { children: React.ReactNode }
 export const useWebContainer = () => {
   const context = useContext(WebContainerContext);
   if (!context) {
-    throw new Error('useWebContainer must be used within a WebContainerProvider');
+    throw new Error(
+      "useWebContainer must be used within a WebContainerProvider",
+    );
   }
   return {
     ...context,
@@ -157,9 +191,9 @@ export const useWebContainer = () => {
 // Add a new function to access the WebContainer from vanilla TS
 export const getWebContainer = () => {
   if (!globalWebContainerInstance) {
-    throw new Error('WebContainer not initialized. Ensure WebContainerProvider is mounted.');
+    throw new Error(
+      "WebContainer not initialized. Ensure WebContainerProvider is mounted.",
+    );
   }
   return globalWebContainerInstance;
 };
-
-

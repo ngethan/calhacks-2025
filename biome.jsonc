@@ -6,11 +6,20 @@
     "useIgnoreFile": true
   },
   "files": { "ignoreUnknown": false, "ignore": [] },
-  "formatter": { "enabled": true },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 80,
+    "ignore": ["drizzle"]
+  },
   "organizeImports": { "enabled": true },
   "linter": {
     "enabled": true,
     "rules": {
+      "a11y": {
+        "useKeyWithClickEvents": "off"
+      },
       "suspicious": {
         "noArrayIndexKey": "off"
       },
