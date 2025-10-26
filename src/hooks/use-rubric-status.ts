@@ -9,6 +9,7 @@ export interface RubricStatus {
   rubric: any | null;
   challenge: string | null;
   framework: string | null;
+  sessionId: string | null;
 }
 
 export function useRubricStatus() {
@@ -19,30 +20,53 @@ export function useRubricStatus() {
     rubric: null,
     challenge: null,
     framework: null,
+    sessionId: null,
   });
 
   useEffect(() => {
-    const checkStatus = () => {
-      const isGenerating = localStorage.getItem("rubricGenerating") === "true";
-      const hasFailed = localStorage.getItem("rubricGenerationFailed") === "true";
-      const rubricData = localStorage.getItem("currentRubric");
-      const challenge = localStorage.getItem("currentChallenge");
-      const framework = localStorage.getItem("currentFramework");
+    const checkStatus = async () => {
+      try {
+        const response = await fetch("/api/assessment/rubric");
 
-      setStatus({
-        isGenerating,
-        isReady: !isGenerating && rubricData !== null,
-        hasFailed,
-        rubric: rubricData ? JSON.parse(rubricData) : null,
-        challenge,
-        framework,
-      });
+        if (!response.ok) {
+          setStatus({
+            isGenerating: false,
+            isReady: false,
+            hasFailed: false,
+            rubric: null,
+            challenge: null,
+            framework: null,
+            sessionId: null,
+          });
+          return;
+        }
+
+        const data = await response.json();
+        const { sessionId, rubric, framework, problemContent } = data;
+
+        setStatus({
+          isGenerating: !rubric, // Still generating if no rubric yet
+          isReady: !!rubric,
+          hasFailed: false,
+          rubric,
+          challenge: problemContent,
+          framework,
+          sessionId,
+        });
+      } catch (error) {
+        console.error("Error checking rubric status:", error);
+        setStatus((prev) => ({
+          ...prev,
+          hasFailed: true,
+          isGenerating: false,
+        }));
+      }
     };
 
     // Check immediately
     checkStatus();
 
-    // Poll for updates every 2 seconds while generating
+    // Poll for updates every 2 seconds
     const interval = setInterval(checkStatus, 2000);
 
     return () => clearInterval(interval);
@@ -50,4 +74,3 @@ export function useRubricStatus() {
 
   return status;
 }
-
