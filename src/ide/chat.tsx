@@ -351,6 +351,7 @@ export const Chat = ({ onClose }: ChatProps) => {
     stop,
     addToolResult,
   } = useChat({
+    id: activeSessionId || undefined,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onToolCall: async ({ toolCall }) => {
       console.log("[!] -> toolCall", toolCall);
