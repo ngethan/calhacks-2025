@@ -826,9 +826,21 @@ export const Chat = ({ onClose }: ChatProps) => {
         <div className="space-y-3 p-3">
           {messages.length === 0 && (
             <div className="flex h-full flex-col items-center justify-center px-4 py-12">
-              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                <div className="h-4 w-4 rounded-full bg-primary/20" />
+              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 animate-[pingGrow_3.5s_ease-in-out_infinite]">
+                <div className="h-4 w-4 rounded-full bg-primary/20 animate-[pingGrow_3.5s_ease-in-out_infinite]" />
               </div>
+              <style jsx global>{`
+                @keyframes pingGrow {
+                  0%, 100% {
+                    transform: scale(1);
+                    opacity: 1;
+                  }
+                  50% {
+                    transform: scale(1.17);
+                    opacity: .9;
+                  }
+                }
+              `}</style>
               <p className="text-center text-muted-foreground text-xs">
                 Ask me anything about your code
               </p>
