@@ -65,7 +65,7 @@ export default function SignUpPage() {
         {
           email: formData.email,
           password: formData.password,
-          name: formData.name,
+          name: formData.email.split("@")[0], // Use email prefix as name
         },
         {
           onSuccess: () => {
@@ -272,7 +272,6 @@ export default function SignUpPage() {
             className="h-12 w-full"
             disabled={
               isLoading ||
-              !formData.name.trim() ||
               !formData.email.trim() ||
               !formData.password ||
               !formData.confirmPassword ||
