@@ -112,10 +112,8 @@ export const SearchPage = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search"
             className="h-[26px] w-full rounded border border-border/60 bg-[var(--vscode-input-background)] px-2 pr-20 font-mono text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
-            // eslint-disable-next-line jsx-a11y/no-autofocus
-            autoFocus
           />
-          <div className="absolute right-1 top-1/2 flex -translate-y-1/2 gap-0.5">
+          <div className="-translate-y-1/2 absolute top-1/2 right-1 flex gap-0.5">
             <ToggleButton
               active={caseSensitive}
               onClick={() => setCaseSensitive(!caseSensitive)}
@@ -201,7 +199,7 @@ export const SearchPage = () => {
         ) : (
           <div>
             {/* Results Header */}
-            <div className="flex items-center justify-between border-b border-border/30 bg-background px-2.5 py-1.5">
+            <div className="flex items-center justify-between border-border/30 border-b bg-background px-2.5 py-1.5">
               <div className="font-sans text-[11px] text-muted-foreground">
                 {totalMatches} {totalMatches === 1 ? "result" : "results"} in{" "}
                 {results.length} {results.length === 1 ? "file" : "files"}
@@ -252,7 +250,7 @@ function FileSearchResult({
   onMatchClick,
 }: FileSearchResultProps) {
   return (
-    <div className="border-b border-border/20">
+    <div className="border-border/20 border-b">
       {/* File Header */}
       <div
         className="group flex cursor-pointer items-center gap-1.5 px-2.5 py-1 transition-colors hover:bg-accent/50"
@@ -317,13 +315,14 @@ function MatchResult({ match, onClick }: MatchResultProps) {
   };
 
   // Calculate trimmed offsets
-  const trimStart = match.lineContent.length - match.lineContent.trimStart().length;
+  const trimStart =
+    match.lineContent.length - match.lineContent.trimStart().length;
   const adjustedStart = Math.max(0, match.columnStart - trimStart);
   const adjustedEnd = match.columnEnd - trimStart;
 
   return (
     <div
-      className="group flex cursor-pointer items-start gap-2 py-0.5 pl-7 pr-2 transition-colors hover:bg-accent/40"
+      className="group flex cursor-pointer items-start gap-2 py-0.5 pr-2 pl-7 transition-colors hover:bg-accent/40"
       onClick={onClick}
     >
       <span className="mt-[2px] w-9 shrink-0 text-right font-mono text-[11px] text-muted-foreground/60">

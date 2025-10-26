@@ -1,9 +1,9 @@
 "use client";
 
-import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
-import { useEffect, useRef } from "react";
+import { Terminal } from "@xterm/xterm";
 import { Terminal as TerminalIcon } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 import "@xterm/xterm/css/xterm.css";
 
@@ -13,7 +13,11 @@ interface CommandOutputCardProps {
   cwd?: string;
 }
 
-export const CommandOutputCard = ({ command, output, cwd }: CommandOutputCardProps) => {
+export const CommandOutputCard = ({
+  command,
+  output,
+  cwd,
+}: CommandOutputCardProps) => {
   const termRef = useRef<HTMLDivElement>(null);
   const terminalInstance = useRef<Terminal | null>(null);
   const fitAddon = useRef<FitAddon | null>(null);
@@ -28,7 +32,8 @@ export const CommandOutputCard = ({ command, output, cwd }: CommandOutputCardPro
       cursorBlink: false,
       cursorStyle: "block",
       fontSize: 12,
-      fontFamily: '"Cascadia Code", "Fira Code", "Consolas", "Monaco", monospace',
+      fontFamily:
+        '"Cascadia Code", "Fira Code", "Consolas", "Monaco", monospace',
       theme: {
         background: "#1e1e1e",
         foreground: "#d4d4d4",
@@ -59,7 +64,7 @@ export const CommandOutputCard = ({ command, output, cwd }: CommandOutputCardPro
 
     // Open terminal
     terminal.open(termRef.current);
-    
+
     // Fit to container
     fit.fit();
 
@@ -107,9 +112,9 @@ export const CommandOutputCard = ({ command, output, cwd }: CommandOutputCardPro
   }, []);
 
   return (
-    <div className="rounded-md border border-border/50 bg-muted/30 overflow-hidden">
+    <div className="overflow-hidden rounded-md border border-border/50 bg-muted/30">
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border/50 bg-muted/50 px-3 py-2">
+      <div className="flex items-center gap-2 border-border/50 border-b bg-muted/50 px-3 py-2">
         <TerminalIcon className="h-3.5 w-3.5 text-muted-foreground" />
         <span className="font-medium text-foreground text-xs">
           Command Execution
@@ -117,14 +122,13 @@ export const CommandOutputCard = ({ command, output, cwd }: CommandOutputCardPro
       </div>
 
       {/* Terminal Output */}
-      <div 
-        ref={termRef} 
+      <div
+        ref={termRef}
         className="h-[200px] w-full overflow-hidden"
-        style={{ 
+        style={{
           padding: "8px",
         }}
       />
     </div>
   );
 };
-

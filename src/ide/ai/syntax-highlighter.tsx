@@ -1,7 +1,7 @@
 "use client";
 
-import { codeToHtml, codeToTokensBase, type BundledLanguage } from "shiki";
 import { useEffect, useState } from "react";
+import { type BundledLanguage, codeToHtml, codeToTokensBase } from "shiki";
 
 type SyntaxHighlightedCodeProps = {
   code: string;
@@ -107,7 +107,7 @@ export function SyntaxHighlightedLine({
   className = "",
 }: SyntaxHighlightedLineProps) {
   const [tokens, setTokens] = useState<{ content: string; color?: string }[]>(
-    []
+    [],
   );
   const [isLoading, setIsLoading] = useState(true);
 
@@ -126,7 +126,7 @@ export function SyntaxHighlightedLine({
           lineTokens.map((token) => ({
             content: token.content,
             color: token.color,
-          }))
+          })),
         );
         setIsLoading(false);
       })

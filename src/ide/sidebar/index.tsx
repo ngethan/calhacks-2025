@@ -26,7 +26,9 @@ const SidebarButton = memo(
       <div
         className={cn(
           "flex h-12 w-12 items-center justify-center rounded-none border-l-2 transition-colors",
-          currentPage === toPage ? "border-l-blue-500 bg-sidebar-accent" : "border-l-transparent",
+          currentPage === toPage
+            ? "border-l-blue-500 bg-sidebar-accent"
+            : "border-l-transparent",
         )}
       >
         <button
@@ -75,7 +77,9 @@ export const IDESidebar = () => {
               key={key}
               className={cn(
                 "scale-150 rounded-none border-l-2 transition-colors hover:cursor-pointer",
-                router.page === key ? "border-l-blue-500 bg-sidebar-accent text-foreground" : "border-l-transparent text-muted-foreground",
+                router.page === key
+                  ? "border-l-blue-500 bg-sidebar-accent text-foreground"
+                  : "border-l-transparent text-muted-foreground",
               )}
               onClick={() => router.setPage(key as AllPages)}
             >

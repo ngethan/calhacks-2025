@@ -65,21 +65,21 @@ export default function SignUpPage() {
         {
           email: formData.email,
           password: formData.password,
-          name: formData.email.split("@")[0], // Use email prefix as name
+          name: formData.email.split("@")[0] ?? "User", // Use email prefix as name
         },
         {
           onSuccess: () => {
             toast.success(
-              "Account created successfully! Please check your email for verification."
+              "Account created successfully! Please check your email for verification.",
             );
             router.push(
-              "/auth/login?success=Please verify your email to continue"
+              "/auth/login?success=Please verify your email to continue",
             );
           },
           onError: (ctx) => {
             toast.error(ctx.error.message ?? "Sign up failed");
           },
-        }
+        },
       );
     } catch (err) {
       console.error("Signup error:", err);

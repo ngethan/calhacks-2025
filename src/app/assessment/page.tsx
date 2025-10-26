@@ -13,8 +13,8 @@ import {
 import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Streamdown } from "streamdown";
 import { toast } from "sonner";
+import { Streamdown } from "streamdown";
 
 type Framework = "react-router-v7" | "nextjs" | null;
 
@@ -173,7 +173,9 @@ export default function AssessmentPage() {
   const handleViewProblem = async () => {
     // Check if there's an active session
     if (activeSession) {
-      toast.error("You already have an active assessment. Please resume or abandon it first.");
+      toast.error(
+        "You already have an active assessment. Please resume or abandon it first.",
+      );
       return;
     }
 
@@ -218,8 +220,7 @@ export default function AssessmentPage() {
       }
     } catch (error) {
       console.error("Error loading assessment:", error);
-      const errorMsg =
-        error instanceof Error ? error.message : "Unknown error";
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
       toast.error(`Failed to load assessment: ${errorMsg}`, {
         description: "Please check that you're logged in and try again.",
       });
@@ -263,8 +264,7 @@ export default function AssessmentPage() {
       router.push("/ide");
     } catch (error) {
       console.error("Error starting assessment:", error);
-      const errorMsg =
-        error instanceof Error ? error.message : "Unknown error";
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
       toast.error(`Failed to start assessment: ${errorMsg}`);
       setIsStarting(false);
     }
@@ -312,10 +312,10 @@ export default function AssessmentPage() {
               </CardHeader>
               <CardContent>
                 <p className="mb-4 text-muted-foreground text-sm">
-                  You already have an assessment in progress. You can resume where
-                  you left off or abandon it to start a new one.
+                  You already have an assessment in progress. You can resume
+                  where you left off or abandon it to start a new one.
                 </p>
-                <div className="flex gap-3 relative z-10">
+                <div className="relative z-10 flex gap-3">
                   <Button
                     onClick={handleResumeSession}
                     className="flex-1"
@@ -326,7 +326,7 @@ export default function AssessmentPage() {
                   </Button>
                   <button
                     onClick={() => setShowAbandonConfirmation(true)}
-                    className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-md bg-destructive px-6 font-medium text-sm text-white transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none"
+                    className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-md bg-destructive px-6 font-medium text-sm text-white transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                     type="button"
                     disabled={showAbandonConfirmation}
                   >
@@ -342,25 +342,27 @@ export default function AssessmentPage() {
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 rounded-lg backdrop-blur-sm"
+                className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-black/60 backdrop-blur-sm"
               >
-                <div className="bg-white dark:bg-card rounded-lg p-6 shadow-xl max-w-md mx-4 border border-border">
-                  <h3 className="font-semibold text-lg mb-2">Abandon Assessment?</h3>
-                  <p className="text-muted-foreground text-sm mb-6">
+                <div className="mx-4 max-w-md rounded-lg border border-border bg-white p-6 shadow-xl dark:bg-card">
+                  <h3 className="mb-2 font-semibold text-lg">
+                    Abandon Assessment?
+                  </h3>
+                  <p className="mb-6 text-muted-foreground text-sm">
                     This action cannot be undone and all progress will be lost.
                   </p>
                   <div className="flex gap-3">
                     <button
                       onClick={handleAbandonSession}
                       disabled={isAbandoning}
-                      className="inline-flex h-10 flex-1 items-center justify-center rounded-md bg-red-600 px-4 font-medium text-sm text-white transition-all hover:bg-red-700 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+                      className="inline-flex h-10 flex-1 items-center justify-center rounded-md bg-red-600 px-4 font-medium text-sm text-white transition-all hover:scale-[1.02] hover:bg-red-700 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
                     >
                       {isAbandoning ? "Abandoning..." : "Abandon"}
                     </button>
                     <button
                       onClick={() => setShowAbandonConfirmation(false)}
                       disabled={isAbandoning}
-                      className="inline-flex h-10 flex-1 items-center justify-center rounded-md border border-gray-600 bg-transparent px-4 font-medium text-sm text-foreground transition-all hover:bg-accent disabled:opacity-50"
+                      className="inline-flex h-10 flex-1 items-center justify-center rounded-md border border-gray-600 bg-transparent px-4 font-medium text-foreground text-sm transition-all hover:bg-accent disabled:opacity-50"
                     >
                       Cancel
                     </button>

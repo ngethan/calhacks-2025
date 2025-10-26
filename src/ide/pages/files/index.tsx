@@ -64,11 +64,12 @@ export const FileTreeNode: React.FC<FileTreeNodeProps> = ({
   const editorState = useEditorState();
 
   // Get the currently active file path
-  const activeFilePath = editorState.activeWindow !== null
-    ? editorState.windows[editorState.activeWindow]?.tabs[
-        editorState.windows[editorState.activeWindow]?.activeTab ?? 0
-      ]?.path
-    : null;
+  const activeFilePath =
+    editorState.activeWindow !== null
+      ? editorState.windows[editorState.activeWindow]?.tabs[
+          editorState.windows[editorState.activeWindow]?.activeTab ?? 0
+        ]?.path
+      : null;
 
   const isActiveFile = !("directory" in node) && activeFilePath === fullPath;
 
@@ -388,8 +389,8 @@ export const FilesPage = () => {
   };
 
   return (
-    <div className="group h-full flex flex-col overflow-hidden bg-sidebar font-mono text-sm">
-      <div className="p-2 space-y-2 shrink-0">
+    <div className="group flex h-full flex-col overflow-hidden bg-sidebar font-mono text-sm">
+      <div className="shrink-0 space-y-2 p-2">
         <div className="group/header flex items-center justify-between">
           <h2 className="font-sans font-semibold text-muted-foreground text-xs uppercase">
             Explorer
@@ -424,15 +425,19 @@ export const FilesPage = () => {
 
         {creatingType && (
           <div className="space-y-1">
-            {creatingPath !== '/' && (
-              <div className="text-xs text-muted-foreground px-2">
+            {creatingPath !== "/" && (
+              <div className="px-2 text-muted-foreground text-xs">
                 Creating in: <span className="font-mono">{creatingPath}</span>
               </div>
             )}
-            <div className="flex items-center gap-2 px-2 py-1 bg-[#2A2D2E] rounded">
-              <FileIcon 
-                node={creatingType === 'folder' ? { directory: {}, open: false } : { file: { size: 0, isBinary: false } }} 
-                name={newItemName || 'untitled'} 
+            <div className="flex items-center gap-2 rounded bg-[#2A2D2E] px-2 py-1">
+              <FileIcon
+                node={
+                  creatingType === "folder"
+                    ? { directory: {}, open: false }
+                    : { file: { size: 0, isBinary: false } }
+                }
+                name={newItemName || "untitled"}
               />
               <input
                 ref={inputRef}
@@ -441,13 +446,15 @@ export const FilesPage = () => {
                 onChange={(e) => setNewItemName(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onBlur={handleCancelCreate}
-                placeholder={creatingType === 'file' ? 'filename.ext' : 'foldername'}
-                className="flex-1 bg-transparent border-none outline-none text-xs px-1 min-w-0"
+                placeholder={
+                  creatingType === "file" ? "filename.ext" : "foldername"
+                }
+                className="min-w-0 flex-1 border-none bg-transparent px-1 text-xs outline-none"
               />
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex shrink-0 items-center gap-1">
                 <button
                   type="button"
-                  className="p-1 hover:bg-[#3A3D3E] rounded transition-colors flex items-center justify-center"
+                  className="flex items-center justify-center rounded p-1 transition-colors hover:bg-[#3A3D3E]"
                   onClick={handleConfirmCreate}
                   onMouseDown={(e) => e.preventDefault()}
                   title="Confirm (Enter)"
@@ -456,7 +463,7 @@ export const FilesPage = () => {
                 </button>
                 <button
                   type="button"
-                  className="p-1 hover:bg-[#3A3D3E] rounded transition-colors flex items-center justify-center"
+                  className="flex items-center justify-center rounded p-1 transition-colors hover:bg-[#3A3D3E]"
                   onClick={handleCancelCreate}
                   onMouseDown={(e) => e.preventDefault()}
                   title="Cancel (Escape)"

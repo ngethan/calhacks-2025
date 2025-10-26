@@ -1,12 +1,7 @@
 import { env } from "@/env";
 import { auth } from "@/lib/auth";
 import { createOpenAI } from "@ai-sdk/openai";
-import {
-  convertToModelMessages,
-  streamText,
-  tool,
-  type UIMessage,
-} from "ai";
+import { type UIMessage, convertToModelMessages, streamText, tool } from "ai";
 import { z } from "zod";
 
 const openrouter = createOpenAI({
@@ -55,10 +50,19 @@ const tools = {
     description: "Run a command",
     inputSchema: z.object({
       command: z.string().describe("The command to run"),
-      cwd: z.string().describe("The working directory to run the command in").optional(),
-      outputLimit: z.number().default(1000).describe("The maximum number of characters to return in the output").optional(),
+      cwd: z
+        .string()
+        .describe("The working directory to run the command in")
+        .optional(),
+      outputLimit: z
+        .number()
+        .default(1000)
+        .describe("The maximum number of characters to return in the output")
+        .optional(),
     }),
-    outputSchema: z.string().describe("The output of the command (sliced to the outputLimit)"),
+    outputSchema: z
+      .string()
+      .describe("The output of the command (sliced to the outputLimit)"),
   }),
   editFileWithPatch: tool({
     description: `Edit a file by applying a unified diff patch. Use this tool when you want to suggest changes to code files. 
@@ -72,7 +76,9 @@ The patch should be in unified diff format with:
 
 Include 3+ lines of context before and after changes for accurate patching.`,
     inputSchema: z.object({
-      path: z.string().describe("The file path to edit (e.g., /src/app/page.tsx)"),
+      path: z
+        .string()
+        .describe("The file path to edit (e.g., /src/app/page.tsx)"),
       diff: z.string().describe(`The unified diff patch to apply. Example:
 --- /src/app/page.tsx
 +++ /src/app/page.tsx
@@ -82,7 +88,9 @@ Include 3+ lines of context before and after changes for accurate patching.`,
 +  return <div>Hello World</div>
  }
 `),
-      explanation: z.string().describe("Brief explanation of what changes are being made and why"),
+      explanation: z
+        .string()
+        .describe("Brief explanation of what changes are being made and why"),
     }),
     execute: async ({ path, diff, explanation }) => {
       // This is executed on the server - we return the edit info
@@ -118,9 +126,14 @@ export async function POST(req: Request) {
       "messages",
     );
 
-    const { messages, currentFile }: { messages: UIMessage[]; currentFile?: { path: string; content: string } } = 
-      requestSchema.parse(body);
-    
+    const {
+      messages,
+      currentFile,
+    }: {
+      messages: UIMessage[];
+      currentFile?: { path: string; content: string };
+    } = requestSchema.parse(body);
+
     console.log("[API] Parsed successfully. Current file:", currentFile?.path);
 
     // Build system prompt with file context
@@ -166,7 +179,7 @@ The user can then accept or reject your suggested changes in the UI.`
     });
 
     console.log("[API] Stream created, returning UI message stream response");
-    
+
     // Return the UI message stream (proper AI SDK format)
     return result.toUIMessageStreamResponse();
   } catch (error) {

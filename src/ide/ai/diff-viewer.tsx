@@ -4,7 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Check, ChevronDown, ChevronRight, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { FileEdit } from "./diff-utils";
-import { SyntaxHighlightedCode, SyntaxHighlightedLine } from "./syntax-highlighter";
+import {
+  SyntaxHighlightedCode,
+  SyntaxHighlightedLine,
+} from "./syntax-highlighter";
 
 type DiffViewerProps = {
   edit: FileEdit;
@@ -73,7 +76,7 @@ function parseDiffToLines(diffText: string): DiffLine[] {
 
 export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
   const [status, setStatus] = useState<"pending" | "accepted" | "rejected">(
-    "pending"
+    "pending",
   );
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -153,7 +156,10 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
           </Button>
         </div>
         {!isCollapsed && (
-          <SyntaxHighlightedCode code={edit.content || ""} filePath={edit.path} />
+          <SyntaxHighlightedCode
+            code={edit.content || ""}
+            filePath={edit.path}
+          />
         )}
       </div>
     );
@@ -234,8 +240,8 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
                     line.type === "add"
                       ? "bg-green-500/10"
                       : line.type === "delete"
-                      ? "bg-red-500/10"
-                      : ""
+                        ? "bg-red-500/10"
+                        : ""
                   }
                 >
                   <td className="w-10 select-none border-border border-r bg-muted/30 px-2 py-0 text-right text-muted-foreground">

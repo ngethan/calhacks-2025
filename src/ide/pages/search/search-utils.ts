@@ -45,10 +45,7 @@ export async function searchInFiles(
   let searchPattern: RegExp;
   try {
     if (useRegex) {
-      searchPattern = new RegExp(
-        searchQuery,
-        caseSensitive ? "g" : "gi",
-      );
+      searchPattern = new RegExp(searchQuery, caseSensitive ? "g" : "gi");
     } else {
       const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const pattern = wholeWord ? `\\b${escapedQuery}\\b` : escapedQuery;
@@ -90,10 +87,7 @@ export async function searchInFiles(
 /**
  * Search within a single file's content
  */
-function searchInFileContent(
-  content: string,
-  pattern: RegExp,
-): SearchMatch[] {
+function searchInFileContent(content: string, pattern: RegExp): SearchMatch[] {
   const matches: SearchMatch[] = [];
   const lines = content.split("\n");
 
@@ -104,17 +98,18 @@ function searchInFileContent(
     // Reset regex lastIndex for each line
     pattern.lastIndex = 0;
 
-    let match: RegExpExecArray | null;
-    while ((match = pattern.exec(line)) !== null) {
+    let match: RegExpExecArray | null = pattern.exec(line);
+    while (match !== null) {
       matches.push({
         lineNumber: i + 1,
         lineContent: line,
         columnStart: match.index,
         columnEnd: match.index + match[0].length,
       });
+      match = pattern.exec(line);
 
       // Prevent infinite loop on zero-width matches
-      if (match.index === pattern.lastIndex) {
+      if (match && match.index === pattern.lastIndex) {
         pattern.lastIndex++;
       }
     }
