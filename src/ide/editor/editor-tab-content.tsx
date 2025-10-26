@@ -117,6 +117,20 @@ export const EditorTabContent = ({
           monaco.editor.setTheme("runway-dark");
           editorRef.current = editor;
           monacoRef.current = monaco;
+
+          // Disable TypeScript diagnostics
+          monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+            noSemanticValidation: true,
+            noSyntaxValidation: true,
+            noSuggestionDiagnostics: true,
+          });
+
+          // Disable JavaScript diagnostics
+          monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+            noSemanticValidation: true,
+            noSyntaxValidation: true,
+            noSuggestionDiagnostics: true,
+          });
         }}
         onChange={onChange}
       />
