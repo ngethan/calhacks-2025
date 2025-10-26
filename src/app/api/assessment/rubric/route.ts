@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     if (!sessionId || !rubric) {
       return NextResponse.json(
         { error: "Session ID and rubric are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -29,14 +29,14 @@ export async function POST(request: Request) {
       where: and(
         eq(assessmentSession.id, sessionId),
         eq(assessmentSession.userId, session.user.id),
-        eq(assessmentSession.status, "active")
+        eq(assessmentSession.status, "active"),
       ),
     });
 
     if (!activeSession) {
       return NextResponse.json(
         { error: "Active assessment session not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     console.error("Error updating rubric:", error);
     return NextResponse.json(
       { error: "Failed to update rubric" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -75,14 +75,14 @@ export async function GET(request: Request) {
       const activeSession = await db.query.assessmentSession.findFirst({
         where: and(
           eq(assessmentSession.userId, session.user.id),
-          eq(assessmentSession.status, "active")
+          eq(assessmentSession.status, "active"),
         ),
       });
 
       if (!activeSession) {
         return NextResponse.json(
           { error: "No active assessment session found" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
@@ -98,14 +98,14 @@ export async function GET(request: Request) {
     const assessmentData = await db.query.assessmentSession.findFirst({
       where: and(
         eq(assessmentSession.id, sessionId),
-        eq(assessmentSession.userId, session.user.id)
+        eq(assessmentSession.userId, session.user.id),
       ),
     });
 
     if (!assessmentData) {
       return NextResponse.json(
         { error: "Assessment session not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -119,7 +119,7 @@ export async function GET(request: Request) {
     console.error("Error fetching rubric:", error);
     return NextResponse.json(
       { error: "Failed to fetch rubric" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

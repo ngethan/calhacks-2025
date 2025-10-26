@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import type React from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ChevronRight,
   ChevronDown,
@@ -107,7 +108,7 @@ export const FileTreeNode: React.FC<FileTreeNodeProps> = ({
             >
               Cancel
             </Button>
-          </>
+          </>,
         );
         console.log(" -> binary file", fullPath);
       }
@@ -172,7 +173,7 @@ export const FilesPage = () => {
   const { files, setFiles } = useFileSystem();
   const sorted = sortedEntries(files);
   const [creatingType, setCreatingType] = useState<"file" | "folder" | null>(
-    null
+    null,
   );
   const [newItemName, setNewItemName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -222,7 +223,7 @@ export const FilesPage = () => {
       toast.error(
         `Failed to create ${creatingType}: ${
           error instanceof Error ? error.message : "Unknown error"
-        }`
+        }`,
       );
     }
 
@@ -266,15 +267,15 @@ export const FilesPage = () => {
   };
 
   return (
-    <div className="group bg-sidebar p-2 font-mono text-sm h-full overflow-auto">
-      <div className="group/header flex items-center justify-between mb-2">
-        <h2 className="font-semibold font-sans text-xs uppercase text-muted-foreground">
+    <div className="group h-full overflow-auto bg-sidebar p-2 font-mono text-sm">
+      <div className="group/header mb-2 flex items-center justify-between">
+        <h2 className="font-sans text-xs font-semibold uppercase text-muted-foreground">
           Explorer
         </h2>
-        <div className="flex items-center gap-1 opacity-0 group-hover/header:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover/header:opacity-100">
           <button
             type="button"
-            className="p-1 hover:bg-[#2A2D2E] rounded transition-colors"
+            className="rounded p-1 transition-colors hover:bg-[#2A2D2E]"
             title="New File"
             onClick={handleCreateFile}
           >
@@ -282,7 +283,7 @@ export const FilesPage = () => {
           </button>
           <button
             type="button"
-            className="p-1 hover:bg-[#2A2D2E] rounded transition-colors"
+            className="rounded p-1 transition-colors hover:bg-[#2A2D2E]"
             title="New Folder"
             onClick={handleCreateFolder}
           >
@@ -290,7 +291,7 @@ export const FilesPage = () => {
           </button>
           <button
             type="button"
-            className="p-1 hover:bg-[#2A2D2E] rounded transition-colors"
+            className="rounded p-1 transition-colors hover:bg-[#2A2D2E]"
             title="Collapse All"
             onClick={collapseAll}
           >
@@ -300,7 +301,7 @@ export const FilesPage = () => {
       </div>
 
       {creatingType && (
-        <div className="mb-2 flex items-center gap-1 px-2 py-1 bg-[#2A2D2E] rounded">
+        <div className="mb-2 flex items-center gap-1 rounded bg-[#2A2D2E] px-2 py-1">
           <FileIcon
             node={
               creatingType === "folder"
@@ -318,11 +319,11 @@ export const FilesPage = () => {
             placeholder={
               creatingType === "file" ? "filename.ext" : "foldername"
             }
-            className="flex-1 bg-transparent border-none outline-none text-xs px-1"
+            className="flex-1 border-none bg-transparent px-1 text-xs outline-none"
           />
           <button
             type="button"
-            className="p-0.5 hover:bg-[#3A3D3E] rounded transition-colors"
+            className="rounded p-0.5 transition-colors hover:bg-[#3A3D3E]"
             onClick={handleConfirmCreate}
             title="Confirm"
           >
@@ -330,7 +331,7 @@ export const FilesPage = () => {
           </button>
           <button
             type="button"
-            className="p-0.5 hover:bg-[#3A3D3E] rounded transition-colors"
+            className="rounded p-0.5 transition-colors hover:bg-[#3A3D3E]"
             onClick={handleCancelCreate}
             title="Cancel"
           >

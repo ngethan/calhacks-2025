@@ -27,7 +27,7 @@ export function getEncoding(
   const textEncoding = "utf8";
   const binaryEncoding = "binary";
   const chunkLength = opts?.chunkLength ?? 24;
-  let chunkBegin = opts?.chunkBegin ?? 0;
+  let chunkBegin: number = opts?.chunkBegin ?? 0;
 
   // Discover
   if (opts?.chunkBegin == null) {

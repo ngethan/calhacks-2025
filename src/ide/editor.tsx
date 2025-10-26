@@ -103,13 +103,13 @@ export const useEditorState = create<EditorState>()(
           const w = state.windows[state.activeWindow];
           if (w) {
             const existingTabIndex = w.tabs.findIndex(
-              (tab) => tab.path === path
+              (tab) => tab.path === path,
             );
             if (existingTabIndex >= 0) {
               w.activeTab = existingTabIndex;
               console.log(
                 "tab already exists, setting active tab to",
-                existingTabIndex
+                existingTabIndex,
               );
             } else {
               w.tabs.push({ path, content: "" });
@@ -120,7 +120,7 @@ export const useEditorState = create<EditorState>()(
         }
       });
     },
-  }))
+  })),
   // {
   //   name: "runway-editor-state",
   //   storage: createJSONStorage(() => localStorage),
@@ -172,20 +172,20 @@ export const IDEEditor = () => {
               onValueChange={(value) =>
                 editorState.setActiveTab(i, Number.parseInt(value))
               }
-              className="w-full h-full"
+              className="h-full w-full"
             >
-              <TabsPrimitive.List className="bg-sidebar flex flex-row overflow-hidden">
+              <TabsPrimitive.List className="flex flex-row overflow-hidden bg-sidebar">
                 <ScrollArea className="w-full">
                   <div className="flex flex-row flex-nowrap">
                     {w.tabs.map((tab, j) => {
                       // Determine duplicate basename in this window
                       const fileName = tab.path.substring(
-                        tab.path.lastIndexOf("/") + 1
+                        tab.path.lastIndexOf("/") + 1,
                       );
                       const hasDuplicate = w.tabs.some((t, idx) => {
                         if (idx === j) return false;
                         const otherFileName = t.path.substring(
-                          t.path.lastIndexOf("/") + 1
+                          t.path.lastIndexOf("/") + 1,
                         );
                         return fileName === otherFileName;
                       });

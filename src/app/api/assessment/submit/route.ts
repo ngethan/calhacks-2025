@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     if (!sessionId || !code) {
       return NextResponse.json(
         { error: "Session ID and code are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -32,14 +32,14 @@ export async function POST(request: Request) {
       where: and(
         eq(assessmentSession.id, sessionId),
         eq(assessmentSession.userId, session.user.id),
-        eq(assessmentSession.status, "active")
+        eq(assessmentSession.status, "active"),
       ),
     });
 
     if (!activeSession) {
       return NextResponse.json(
         { error: "Active assessment session not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     console.error("Error submitting assessment:", error);
     return NextResponse.json(
       { error: "Failed to submit assessment" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

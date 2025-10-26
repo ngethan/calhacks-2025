@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     if (!framework || !problemContent) {
       return NextResponse.json(
         { error: "Framework and problem content are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -28,14 +28,14 @@ export async function POST(request: Request) {
     const existingSession = await db.query.assessmentSession.findFirst({
       where: and(
         eq(assessmentSession.userId, session.user.id),
-        eq(assessmentSession.status, "active")
+        eq(assessmentSession.status, "active"),
       ),
     });
 
     if (existingSession) {
       return NextResponse.json(
         { error: "You already have an active assessment session" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     console.error("Error creating assessment session:", error);
     return NextResponse.json(
       { error: "Failed to create assessment session" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -3,9 +3,7 @@ import { sql } from "drizzle-orm";
 import { user } from "./auth-schema";
 
 export const assessmentSession = pgTable("assessment_session", {
-  id: text("id")
-    .primaryKey()
-    .default(sql`gen_random_uuid()`),
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
@@ -23,9 +21,7 @@ export const assessmentSession = pgTable("assessment_session", {
 });
 
 export const assessmentSubmission = pgTable("assessment_submission", {
-  id: text("id")
-    .primaryKey()
-    .default(sql`gen_random_uuid()`),
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
   sessionId: text("session_id")
     .notNull()
     .references(() => assessmentSession.id, { onDelete: "cascade" }),

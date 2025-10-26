@@ -53,7 +53,7 @@ export function FilePicker({
 
   useEffect(() => {
     setSelectedIndex(0);
-  }, [searchQuery]);
+  }, []);
 
   useEffect(() => {
     // Focus search input when opened
@@ -116,7 +116,7 @@ export function FilePicker({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             aria-label="Close file picker"
           >
             <X className="h-4 w-4" />
@@ -146,7 +146,7 @@ export function FilePicker({
                   onClick={() => onSelect(file)}
                   onMouseEnter={() => setSelectedIndex(index)}
                 >
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <FileIcon
                       node={{ file: { size: 0, isBinary: false } }}
                       name={file.name}
@@ -161,7 +161,7 @@ export function FilePicker({
                     </div>
                   </div>
                   {isSelected && (
-                    <Check className="h-4 w-4 flex-shrink-0 text-primary" />
+                    <Check className="h-4 w-4 shrink-0 text-primary" />
                   )}
                 </div>
               );

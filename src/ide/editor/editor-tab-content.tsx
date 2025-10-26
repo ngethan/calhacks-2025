@@ -8,8 +8,8 @@ import { useEffect, useRef, useCallback } from "react";
 import { useDebouncedCallback } from "@/lib/utils/debounce-hooks";
 
 loader.init().then((monaco) => {
-  monaco.editor.defineTheme('runway-dark', {
-    base: 'vs-dark',
+  monaco.editor.defineTheme("runway-dark", {
+    base: "vs-dark",
     inherit: true,
     rules: [],
     colors: {
@@ -20,60 +20,77 @@ loader.init().then((monaco) => {
       "editorCursor.foreground": "#528bff",
       "editor.selectionBackground": "#3e4451",
       "editor.inactiveSelectionBackground": "#3a3f4b",
-    }
+    },
   });
 });
 
-type MonacoEditor = Parameters<NonNullable<Parameters<typeof Editor>[0]['onMount']>>[0];
+type MonacoEditor = Parameters<
+  NonNullable<Parameters<typeof Editor>[0]["onMount"]>
+>[0];
 
-export const EditorTabContent = ({ tab, path, index }: { tab: string, path: string, index: number }) => {
+export const EditorTabContent = ({
+  tab,
+  path,
+  index,
+}: { tab: string; path: string; index: number }) => {
   const editorRef = useRef<MonacoEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const isUpdatingFromExternal = useRef(false);
 
-  const debouncedWrite = useDebouncedCallback(async (filePath: string, content: string) => {
-    console.log("[!] -> debounced write", filePath);
-    await fileSystem.writeFileAsync(filePath, content);
-  }, 300);
+  const debouncedWrite = useDebouncedCallback(
+    async (filePath: string, content: string) => {
+      console.log("[!] -> debounced write", filePath);
+      await fileSystem.writeFileAsync(filePath, content);
+    },
+    300,
+  );
 
-  const onChange = useCallback((value: string | undefined) => {
-    // Ignore changes that come from external file updates
-    if (isUpdatingFromExternal.current) {
-      return;
-    }
-    debouncedWrite(path, value || "");
-  }, [path, debouncedWrite]);
+  const onChange = useCallback(
+    (value: string | undefined) => {
+      // Ignore changes that come from external file updates
+      if (isUpdatingFromExternal.current) {
+        return;
+      }
+      debouncedWrite(path, value || "");
+    },
+    [path, debouncedWrite],
+  );
 
   useEffect(() => {
     // Subscribe to file system changes for this specific file
-    const unsubscribe = fileSystem.subscribeToFileChange(path, (newContent: string) => {
-      if (editorRef.current && monacoRef.current) {
-        const currentModel = editorRef.current.getModel();
-        if (currentModel) {
-          const currentValue = currentModel.getValue();
-          // Only update if the content is different
-          if (currentValue !== newContent) {
-            console.log(`[!] -> External change detected for ${path}, updating editor`);
-            isUpdatingFromExternal.current = true;
-            
-            // Preserve cursor position and scroll position
-            const position = editorRef.current.getPosition();
-            const scrollTop = editorRef.current.getScrollTop();
-            
-            // Update the model value
-            currentModel.setValue(newContent);
-            
-            // Restore cursor and scroll position
-            if (position) {
-              editorRef.current.setPosition(position);
+    const unsubscribe = fileSystem.subscribeToFileChange(
+      path,
+      (newContent: string) => {
+        if (editorRef.current && monacoRef.current) {
+          const currentModel = editorRef.current.getModel();
+          if (currentModel) {
+            const currentValue = currentModel.getValue();
+            // Only update if the content is different
+            if (currentValue !== newContent) {
+              console.log(
+                `[!] -> External change detected for ${path}, updating editor`,
+              );
+              isUpdatingFromExternal.current = true;
+
+              // Preserve cursor position and scroll position
+              const position = editorRef.current.getPosition();
+              const scrollTop = editorRef.current.getScrollTop();
+
+              // Update the model value
+              currentModel.setValue(newContent);
+
+              // Restore cursor and scroll position
+              if (position) {
+                editorRef.current.setPosition(position);
+              }
+              editorRef.current.setScrollTop(scrollTop);
+
+              isUpdatingFromExternal.current = false;
             }
-            editorRef.current.setScrollTop(scrollTop);
-            
-            isUpdatingFromExternal.current = false;
           }
         }
-      }
-    });
+      },
+    );
 
     return () => {
       unsubscribe();
@@ -81,16 +98,16 @@ export const EditorTabContent = ({ tab, path, index }: { tab: string, path: stri
   }, [path]);
 
   const theme = useTheme();
-  
+
   return (
     <TabsContent key={tab} value={index + ""} className="mt-0">
       <Editor
         height="90vh"
         path={tab}
         defaultValue={fileSystem.getEditableFileContent(tab, true) || ""}
-        theme={theme.theme === 'dark' ? 'vs-dark' : 'vs-light'}
+        theme={theme.theme === "dark" ? "vs-dark" : "vs-light"}
         onMount={(editor, monaco) => {
-          monaco.editor.setTheme('runway-dark');
+          monaco.editor.setTheme("runway-dark");
           editorRef.current = editor;
           monacoRef.current = monaco;
         }}

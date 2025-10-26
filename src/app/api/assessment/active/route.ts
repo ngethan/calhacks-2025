@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     const activeAssessment = await db.query.assessmentSession.findFirst({
       where: and(
         eq(assessmentSession.userId, session.user.id),
-        eq(assessmentSession.status, "active")
+        eq(assessmentSession.status, "active"),
       ),
     });
 
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     console.error("Error fetching active session:", error);
     return NextResponse.json(
       { error: "Failed to fetch active session" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

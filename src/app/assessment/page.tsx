@@ -104,7 +104,7 @@ export default function AssessmentPage() {
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [selectedFramework, setSelectedFramework] = useState<Framework>(null);
   const [activeSession, setActiveSession] = useState<AssessmentSession | null>(
-    null
+    null,
   );
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
@@ -142,7 +142,7 @@ export default function AssessmentPage() {
 
     if (
       !confirm(
-        "Are you sure you want to abandon your current assessment? This action cannot be undone."
+        "Are you sure you want to abandon your current assessment? This action cannot be undone.",
       )
     ) {
       return;
@@ -160,7 +160,7 @@ export default function AssessmentPage() {
       if (response.ok) {
         setActiveSession(null);
         alert(
-          "Session abandoned successfully. You can now start a new assessment."
+          "Session abandoned successfully. You can now start a new assessment.",
         );
       } else {
         const error = await response.json();
@@ -176,7 +176,7 @@ export default function AssessmentPage() {
     // Check if there's an active session
     if (activeSession) {
       alert(
-        "You already have an active assessment. Please resume or abandon it first."
+        "You already have an active assessment. Please resume or abandon it first.",
       );
       return;
     }
@@ -202,7 +202,7 @@ export default function AssessmentPage() {
         const errorText = await response.text().catch(() => "Unknown error");
         console.error("Assessment API error:", response.status, errorText);
         throw new Error(
-          `Failed to generate assessment: ${response.status} - ${errorText}`
+          `Failed to generate assessment: ${response.status} - ${errorText}`,
         );
       }
 
@@ -225,7 +225,7 @@ export default function AssessmentPage() {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
       alert(
-        `Failed to load assessment: ${errorMessage}\n\nPlease check that you're logged in and try again.`
+        `Failed to load assessment: ${errorMessage}\n\nPlease check that you're logged in and try again.`,
       );
     } finally {
       setIsStreaming(false);

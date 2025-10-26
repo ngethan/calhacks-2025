@@ -113,7 +113,11 @@ The user can then accept or reject your suggested changes.`
     console.log("[API] Messages to send to OpenRouter:");
     messagesToSend.forEach((msg, idx) => {
       console.log(
-        `  ${idx}: role=${msg.role}, contentType=${typeof msg.content}, isArray=${Array.isArray(msg.content)}, contentLength=${msg.content.length}`,
+        `  ${idx}: role=${
+          msg.role
+        }, contentType=${typeof msg.content}, isArray=${Array.isArray(
+          msg.content,
+        )}, contentLength=${msg.content.length}`,
       );
     });
 
