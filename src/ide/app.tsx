@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { WebContainerProvider } from "@/components/container";
+import { IFrameProvider } from "@/ide/iframe-context";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import XTermConsole from "@/components/xterm-console";
-import { IFrame } from "@/ide/iframe";
 import { IDESidebar } from "@/ide/sidebar";
 import { IDESidebarContent } from "@/ide/sidebar/content";
 import { IDEEditor } from "@/ide/editor";
@@ -16,23 +16,29 @@ const App = () => {
 
   return (
     <WebContainerProvider>
-      <SidebarProvider open={false}>
-        <IDESidebar />
-        <ResizablePanelGroup direction="horizontal">
-          <ResizablePanel defaultSize={15} minSize={12} maxSize={30}>
-            <IDESidebarContent />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel>
-            <ResizablePanelGroup direction="vertical" className="h-full min-h-screen max-h-screen">
-              <ResizablePanel>
-                <ResizablePanelGroup direction="horizontal">
+      <IFrameProvider>
+        <SidebarProvider open={false}>
+          <IDESidebar />
+          <ResizablePanelGroup direction="horizontal">
+            <ResizablePanel defaultSize={15} minSize={15} maxSize={30} collapsible>
+              <IDESidebarContent />
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel>
+              <div className="relative h-full min-h-screen max-h-screen pb-10">
+                <ResizablePanelGroup direction="horizontal" className="absolute inset-0">
                   <ResizablePanel collapsible>
-                    <IDEEditor onOpenChat={() => setShowChat(true)} showChat={showChat} />
-                  </ResizablePanel>
-                  <ResizableHandle withHandle />
-                  <ResizablePanel collapsible defaultSize={0}>
-                    <IFrame />
+                    <ResizablePanelGroup direction="horizontal">
+                      <ResizablePanel collapsible>
+                        <ResizablePanelGroup direction="vertical">
+                          <ResizablePanel>
+                            <IDEEditor onOpenChat={() => setShowChat(true)} showChat={showChat} />
+                          </ResizablePanel>
+                          <ResizableHandle withHandle />
+                          <XTermConsole />
+                        </ResizablePanelGroup>
+                      </ResizablePanel>
+                    </ResizablePanelGroup>
                   </ResizablePanel>
                   {showChat && (
                     <>
@@ -43,13 +49,11 @@ const App = () => {
                     </>
                   )}
                 </ResizablePanelGroup>
-              </ResizablePanel>
-              <ResizableHandle withHandle />
-              <XTermConsole />
-            </ResizablePanelGroup>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </SidebarProvider>
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </SidebarProvider>
+      </IFrameProvider>
     </WebContainerProvider>
   )
 }

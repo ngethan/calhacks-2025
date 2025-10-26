@@ -3,12 +3,12 @@ import { fileSystem } from "@/ide/filesystem/zen-fs";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
-import { EditorTabContent } from "@/ide/editor/tab-content";
 import { EditorTab } from "@/ide/editor/tab";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Github, MessageSquare } from "lucide-react";
+import { Eye, Github, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import { TabContent } from "@/ide/editor/tab-content";
 
 type EditorWindow = {
   tabs: { path: string; content: string }[];
@@ -71,7 +71,10 @@ export const useEditorState = create<EditorState>()(
     },
     setActiveTab: (window: number, tab: number) => {
       set((state) => {
-        state.windows[window].activeTab = tab;
+        const w = state.windows[window];
+        if (w) {
+          w.activeTab = tab;
+        }
       });
     },
     addTabToWindow: (window: number, path: string) => {
@@ -180,6 +183,12 @@ export const IDEEditor = ({ onOpenChat, showChat }: IDEEditorProps) => {
             Open AI Chat
           </Button>
         )}
+        <Button variant="outline" size="sm" onClick={() => {
+          editorState.addTabToActiveWindow("internal:preview")
+        }}>
+          <Eye className="h-4 w-4" />
+          Open Preview
+        </Button>
         <Button
           variant="outline"
           size="sm"
@@ -194,42 +203,51 @@ export const IDEEditor = ({ onOpenChat, showChat }: IDEEditorProps) => {
         {editorState.windows.map((w, i) => {
           // TODO: this only works for one window atm
           return (
-            <div key={i}>
-              <TabsPrimitive.Root
-                value={w.activeTab + ""}
-                onValueChange={(value) =>
-                  editorState.setActiveTab(i, parseInt(value))
-                }
-                className="w-full"
-              >
-                <TabsPrimitive.List className="bg-sidebar flex flex-row">
-                  <ScrollArea className="w-full">
-                    <div className="flex flex-row">
-                      {w.tabs.map((tab, j) => {
-                        return (
-                          <EditorTab
-                            key={tab.path}
-                            path={tab.path}
-                            index={j}
-                            showFullPath={true}
-                          />
-                        );
-                      })}
-                    </div>
-                  </ScrollArea>
-                </TabsPrimitive.List>
-                {w.tabs.map((tab, j) => {
-                  return (
-                    <EditorTabContent
-                      key={tab.path}
-                      tab={tab.path}
-                      path={tab.path}
-                      index={j}
-                    />
-                  );
-                })}
-              </TabsPrimitive.Root>
-            </div>
+            <TabsPrimitive.Root
+              value={w.activeTab + ""}
+              onValueChange={(value) =>
+                editorState.setActiveTab(i, parseInt(value))
+              }
+              className="w-full h-full"
+              key={i}
+            >
+              <TabsPrimitive.List className="bg-sidebar flex flex-row overflow-hidden">
+                <ScrollArea className="w-full">
+                  <div className="flex flex-row flex-nowrap">
+                    {w.tabs.map((tab, j) => {
+                      // Check if there are duplicate file names
+                      const fileName = tab.path.substring(tab.path.lastIndexOf('/') + 1);
+                      const hasDuplicate = w.tabs.some((t, idx) => {
+                        if (idx === j) return false;
+                        const otherFileName = t.path.substring(t.path.lastIndexOf('/') + 1);
+                        return fileName === otherFileName;
+                      });
+                      
+                      return (
+                        <EditorTab
+                          key={tab.path}
+                          path={tab.path}
+                          index={j}
+                          windowIndex={i}
+                          showFullPath={hasDuplicate}
+                        />
+                      );
+                    })}
+                  </div>
+                  <ScrollBar orientation="horizontal" className="h-2" />
+                </ScrollArea>
+              </TabsPrimitive.List>
+              {w.tabs.map((tab, j) => {
+                return (
+                  <TabContent
+                    key={tab.path}
+                    tab={tab.path}
+                    path={tab.path}
+                    index={j}
+                  />
+                );
+              })}
+            </TabsPrimitive.Root>
           );
         })}
       </div>
