@@ -1,4 +1,9 @@
-import { FilesIcon, SearchIcon, SettingsIcon, FileTextIcon } from "lucide-react";
+import {
+  FileTextIcon,
+  FilesIcon,
+  SearchIcon,
+  SettingsIcon,
+} from "lucide-react";
 import { create } from "zustand";
 
 export type Page = {
@@ -12,13 +17,13 @@ export const pages: { [key in AllPages]: Page } = {
     name: "Files",
     icon: FilesIcon,
   },
-  challenge: {
-    name: "Challenge",
-    icon: FileTextIcon,
-  },
   search: {
     name: "Search",
     icon: SearchIcon,
+  },
+  challenge: {
+    name: "Challenge",
+    icon: FileTextIcon,
   },
   settings: {
     name: "Settings",

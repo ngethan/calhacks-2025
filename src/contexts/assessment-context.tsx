@@ -32,7 +32,7 @@ export function useAssessmentContext() {
   const context = useContext(AssessmentContext);
   if (!context) {
     throw new Error(
-      "useAssessmentContext must be used within AssessmentProvider"
+      "useAssessmentContext must be used within AssessmentProvider",
     );
   }
   return context;

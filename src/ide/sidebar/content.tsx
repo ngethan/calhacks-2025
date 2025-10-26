@@ -1,5 +1,5 @@
-import { FilesPage } from "@/ide/pages/files";
 import { ChallengePage } from "@/ide/pages/challenge";
+import { FilesPage } from "@/ide/pages/files";
 import { SearchPage } from "@/ide/pages/search";
 import { SettingsPage } from "@/ide/pages/settings";
 import { useIDERouter } from "@/ide/router";

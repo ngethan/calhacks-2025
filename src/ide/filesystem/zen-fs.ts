@@ -33,7 +33,9 @@ class ZenFileSystemHandler {
   async init(sessionId: string, userId: string) {
     await configure({
       mounts: {
-        "/": await IndexedDB.create({ storeName: `zenfs-${sessionId}-${userId}` }),
+        "/": await IndexedDB.create({
+          storeName: `zenfs-${sessionId}-${userId}`,
+        }),
       },
     });
     // zenFs.writeFileSync("/test.txt", "Hello World");

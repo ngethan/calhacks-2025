@@ -56,7 +56,7 @@ export const WebContainerContext = createContext<{
   shellProcess: WebContainerProcess | null;
   addListener: <T extends keyof WebContainerEventMap>(
     event: T,
-    callback: WebContainerEventMap[T],
+    callback: WebContainerEventMap[T]
   ) => string;
   removeListener: (event: keyof WebContainerEventMap, id: string) => void;
 } | null>(null);
@@ -67,7 +67,7 @@ let globalWebContainerInstance: {
   status: WebContainerStatus;
   addListener: <T extends keyof WebContainerEventMap>(
     event: T,
-    callback: WebContainerEventMap[T],
+    callback: WebContainerEventMap[T]
   ) => string;
   removeListener: (event: keyof WebContainerEventMap, id: string) => void;
 } | null = null;
@@ -88,7 +88,7 @@ export const WebContainerProvider = ({
   });
   const status = useRef<WebContainerStatus>("booting");
   const [shellProcess, setShellProcess] = useState<WebContainerProcess | null>(
-    null,
+    null
   );
 
   useEffect(() => {
@@ -138,14 +138,17 @@ export const WebContainerProvider = ({
                     callback(data);
                   }
                 },
-              }),
+              })
             );
             if (framework) {
-              FRAMEWORK_INIT_COMMANDS[framework]?.forEach((command) => {
-                const writer = shellProcess.input.getWriter();
-                writer.write(command + "\n");
-                writer.releaseLock();
-              });
+              const commands = FRAMEWORK_INIT_COMMANDS[framework];
+              if (commands) {
+                for (const command of commands) {
+                  const writer = shellProcess.input.getWriter();
+                  writer.write(`${command}\n`);
+                  writer.releaseLock();
+                }
+              }
             }
 
             // Set the global instance
@@ -159,12 +162,13 @@ export const WebContainerProvider = ({
         );
       });
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, userId, framework]);
 
   // Add the addListener and removeListener functions
   const addListener = <T extends keyof WebContainerEventMap>(
     event: T,
-    callback: WebContainerEventMap[T],
+    callback: WebContainerEventMap[T]
   ): string => {
     const id = crypto.randomUUID();
     listeners.current[event].push({ id, callback: callback });
@@ -172,10 +176,10 @@ export const WebContainerProvider = ({
   };
   const removeListener = <T extends keyof WebContainerEventMap>(
     event: T,
-    id: string,
+    id: string
   ) => {
     listeners.current[event] = listeners.current[event].filter(
-      (listener) => listener.id !== id,
+      (listener) => listener.id !== id
     ) as Listeners[T];
   };
 
@@ -202,7 +206,7 @@ export const useWebContainer = () => {
   const context = useContext(WebContainerContext);
   if (!context) {
     throw new Error(
-      "useWebContainer must be used within a WebContainerProvider",
+      "useWebContainer must be used within a WebContainerProvider"
     );
   }
   return {
@@ -215,7 +219,7 @@ export const useWebContainer = () => {
 export const getWebContainer = () => {
   if (!globalWebContainerInstance) {
     throw new Error(
-      "WebContainer not initialized. Ensure WebContainerProvider is mounted.",
+      "WebContainer not initialized. Ensure WebContainerProvider is mounted."
     );
   }
   return globalWebContainerInstance;

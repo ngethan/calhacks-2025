@@ -13,8 +13,8 @@ import {
 import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Streamdown } from "streamdown";
 import { toast } from "sonner";
+import { Streamdown } from "streamdown";
 
 type Framework = "react-router-v7" | "nextjs" | null;
 
@@ -434,6 +434,7 @@ export default function AssessmentPage() {
                     className="group h-14 bg-white px-8 text-base text-slate-900 hover:bg-white/90 hover:scale-105 transition-all duration-200"
                   >
                     Generate Challenge
+                    {/* biome-ignore lint/a11y/noSvgWithoutTitle: <explanation> */}
                     <svg
                       className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
                       fill="none"

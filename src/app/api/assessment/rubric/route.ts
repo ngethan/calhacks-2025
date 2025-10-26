@@ -53,7 +53,10 @@ export async function POST(request: Request) {
 
     console.log("[Rubric Save API] ✅ Rubric saved successfully to database");
     console.log("[Rubric Save API] Updated session:", updated[0]?.id);
-    console.log("[Rubric Save API] Rubric has keys:", Object.keys(updated[0]?.rubric || {}));
+    console.log(
+      "[Rubric Save API] Rubric has keys:",
+      Object.keys(updated[0]?.rubric || {}),
+    );
 
     return NextResponse.json({ session: updated[0] });
   } catch (error) {
@@ -96,8 +99,14 @@ export async function GET(request: Request) {
 
       console.log("[Rubric GET API] Returning active session data");
       console.log("[Rubric GET API] Session ID:", activeSession.id);
-      console.log("[Rubric GET API] Problem content length:", activeSession.problemContent?.length || 0);
-      console.log("[Rubric GET API] Problem content preview:", activeSession.problemContent?.substring(0, 100) || "EMPTY");
+      console.log(
+        "[Rubric GET API] Problem content length:",
+        activeSession.problemContent?.length || 0,
+      );
+      console.log(
+        "[Rubric GET API] Problem content preview:",
+        activeSession.problemContent?.substring(0, 100) || "EMPTY",
+      );
 
       return NextResponse.json({
         sessionId: activeSession.id,

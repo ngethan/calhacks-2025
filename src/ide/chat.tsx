@@ -1,18 +1,24 @@
 "use client";
 
+import { getWebContainer } from "@/components/container";
 import { FileIcon } from "@/components/file-icon";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { getCurrentFileContext } from "@/ide/ai/context";
 import { type FileEdit, applyDiff, parseFileEdits } from "@/ide/ai/diff-utils";
 import { DiffViewer } from "@/ide/ai/diff-viewer";
+import { CommandOutputCard } from "@/ide/chat/command-output-card";
 import type { FileContext } from "@/ide/chat/context-utils";
 import { FilePicker } from "@/ide/chat/file-picker";
-import { CommandOutputCard } from "@/ide/chat/command-output-card";
 import { useEditorState } from "@/ide/editor";
 import { fileSystem } from "@/ide/filesystem/zen-fs";
 import { type Message, useChatStore } from "@/ide/stores/chat-store";
 import { cn } from "@/lib/utils";
+import { useChat } from "@ai-sdk/react";
+import {
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithToolCalls,
+} from "ai";
 import {
   Check,
   ChevronDown,
@@ -26,9 +32,6 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
-import { getWebContainer } from "@/components/container";
 
 const WORKSPACE_ROOT = "/home/workspace";
 
@@ -68,7 +71,18 @@ function MessageContent({
   isUser = false,
 }: {
   content: string;
-  parts?: any[];
+  parts?: Array<{
+    type: string;
+    text?: string;
+    state?: string;
+    toolCallId?: string;
+    toolName?: string;
+    args?: unknown;
+    result?: unknown;
+    input?: unknown;
+    output?: unknown;
+    errorText?: string;
+  }>;
   onAccept?: (edit: FileEdit) => void;
   onReject?: (edit: FileEdit) => void;
   isUser?: boolean;
@@ -77,7 +91,7 @@ function MessageContent({
   if (isUser) {
     // Check if there are attached files and extract just the user's message
     const attachedFilesMatch = content.match(
-      /\*\*Attached Files:\*\*([\s\S]*)/
+      /\*\*Attached Files:\*\*([\s\S]*)/,
     );
     if (attachedFilesMatch) {
       // Only show the user's actual message, not the attached file context
@@ -115,11 +129,14 @@ function MessageContent({
           // Handle all tool call parts generically
           if (part.type?.startsWith("tool-")) {
             const toolName = part.type.replace("tool-", "");
-            
+
             // Input streaming state
             if (part.state === "input-streaming") {
               return (
-                <div key={idx} className="rounded-md border border-border/50 bg-muted/30 p-3">
+                <div
+                  key={idx}
+                  className="rounded-md border border-border/50 bg-muted/30 p-3"
+                >
                   <div className="flex items-center gap-2">
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                     <span className="font-medium text-foreground text-xs">
@@ -133,20 +150,25 @@ function MessageContent({
             // Input available state
             if (part.state === "input-available") {
               return (
-                <div key={idx} className="rounded-md border border-border/50 bg-muted/30 p-3">
+                <div
+                  key={idx}
+                  className="rounded-md border border-border/50 bg-muted/30 p-3"
+                >
                   <div className="mb-2 flex items-center gap-2">
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                     <span className="font-medium text-foreground text-xs">
                       {toolName}
                     </span>
                   </div>
-                  {part.input && (
+                  {part.input ? (
                     <div className="mt-2 rounded-md bg-muted/50 p-2 font-mono text-[10px]">
                       <pre className="overflow-x-auto whitespace-pre-wrap">
-                        {JSON.stringify(part.input, null, 2)}
+                        {typeof part.input === "string"
+                          ? part.input
+                          : JSON.stringify(part.input, null, 2)}
                       </pre>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               );
             }
@@ -154,10 +176,15 @@ function MessageContent({
             // Output available state - special handling for editFileWithPatch
             if (part.state === "output-available") {
               if (toolName === "editFileWithPatch") {
-                const input = part.input as { path: string; diff: string; explanation: string } | undefined;
-                
+                const input = part.input as
+                  | { path: string; diff: string; explanation: string }
+                  | undefined;
+
                 if (!input?.path || !input?.diff) {
-                  console.error("[Chat] Tool call missing required fields:", input);
+                  console.error(
+                    "[Chat] Tool call missing required fields:",
+                    input,
+                  );
                   return null;
                 }
 
@@ -165,7 +192,7 @@ function MessageContent({
                   path: input.path,
                   diff: input.diff,
                 };
-                
+
                 return (
                   <DiffViewer
                     key={idx}
@@ -178,9 +205,11 @@ function MessageContent({
 
               // Special handling for runCommand
               if (toolName === "runCommand") {
-                const input = part.input as { command: string; cwd?: string; outputLimit?: number } | undefined;
+                const input = part.input as
+                  | { command: string; cwd?: string; outputLimit?: number }
+                  | undefined;
                 const output = part.output as string | undefined;
-                
+
                 if (!input?.command) {
                   console.error("[Chat] runCommand missing command:", input);
                   return null;
@@ -198,34 +227,43 @@ function MessageContent({
 
               // Generic tool output display
               return (
-                <div key={idx} className="rounded-md border border-green-500/30 bg-green-500/5 p-3">
+                <div
+                  key={idx}
+                  className="rounded-md border border-green-500/30 bg-green-500/5 p-3"
+                >
                   <div className="mb-2 flex items-center gap-2">
                     <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                     <span className="font-medium text-foreground text-xs">
                       {toolName}
                     </span>
                   </div>
-                  
+
                   {/* Show input */}
-                  {part.input && Object.keys(part.input).length > 0 && (
+                  {part.input &&
+                  typeof part.input === "object" &&
+                  Object.keys(part.input).length > 0 ? (
                     <div className="mb-2">
-                      <div className="mb-1 text-[10px] text-muted-foreground uppercase">Input:</div>
+                      <div className="mb-1 text-[10px] text-muted-foreground uppercase">
+                        Input:
+                      </div>
                       <div className="rounded-md bg-muted/50 p-2 font-mono text-[10px]">
                         <pre className="overflow-x-auto whitespace-pre-wrap">
                           {JSON.stringify(part.input, null, 2)}
                         </pre>
                       </div>
                     </div>
-                  )}
-                  
+                  ) : null}
+
                   {/* Show output */}
                   {part.output !== undefined && (
                     <div>
-                      <div className="mb-1 text-[10px] text-muted-foreground uppercase">Output:</div>
+                      <div className="mb-1 text-[10px] text-muted-foreground uppercase">
+                        Output:
+                      </div>
                       <div className="rounded-md bg-muted/50 p-2 font-mono text-[10px]">
                         <pre className="overflow-x-auto whitespace-pre-wrap">
-                          {typeof part.output === "string" 
-                            ? part.output 
+                          {typeof part.output === "string"
+                            ? part.output
                             : JSON.stringify(part.output, null, 2)}
                         </pre>
                       </div>
@@ -238,7 +276,10 @@ function MessageContent({
             // Error state
             if (part.state === "output-error") {
               return (
-                <div key={idx} className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                <div
+                  key={idx}
+                  className="rounded-md border border-destructive/30 bg-destructive/5 p-3"
+                >
                   <div className="mb-2 flex items-center gap-2">
                     <X className="h-3.5 w-3.5 text-destructive" />
                     <span className="font-medium text-foreground text-xs">
@@ -339,7 +380,7 @@ export const Chat = ({ onClose }: ChatProps) => {
       (path) => {
         const content = fileSystem.getEditableFileContent(path, true);
         return typeof content === "string" ? content : null;
-      }
+      },
     );
   };
 
@@ -356,15 +397,16 @@ export const Chat = ({ onClose }: ChatProps) => {
     onToolCall: async ({ toolCall }) => {
       console.log("[!] -> toolCall", toolCall);
       const container = getWebContainer();
-        if (!container?.webContainer || container.status !== "ready") {
-          addToolResult({
-            toolCallId: toolCall.toolCallId,
-            state: "output-error",
-            tool: toolCall.toolName,
-            errorText: "WebContainer not ready. Prompt the user to wait for the WebContainer to be ready, then try again.",
-          })
-          return;
-        }
+      if (!container?.webContainer || container.status !== "ready") {
+        addToolResult({
+          toolCallId: toolCall.toolCallId,
+          state: "output-error",
+          tool: toolCall.toolName,
+          errorText:
+            "WebContainer not ready. Prompt the user to wait for the WebContainer to be ready, then try again.",
+        });
+        return;
+      }
       if (toolCall.toolName === "listFiles") {
         const input = toolCall.input as { path: string };
         const files = await container.webContainer?.fs.readdir(input.path);
@@ -394,7 +436,9 @@ export const Chat = ({ onClose }: ChatProps) => {
         });
       } else if (toolCall.toolName === "createFolder") {
         const input = toolCall.input as { path: string };
-        await container.webContainer?.fs.mkdir(input.path, { recursive: false });
+        await container.webContainer?.fs.mkdir(input.path, {
+          recursive: false,
+        });
         addToolResult({
           toolCallId: toolCall.toolCallId,
           state: "output-available",
@@ -403,11 +447,18 @@ export const Chat = ({ onClose }: ChatProps) => {
         });
       } else if (toolCall.toolName === "runCommand") {
         try {
-          const input = toolCall.input as { command: string; cwd?: string; outputLimit?: number };
+          const input = toolCall.input as {
+            command: string;
+            cwd?: string;
+            outputLimit?: number;
+          };
           const cwd = input.cwd ?? "/";
           // Split command into command name and args
-          const commandParts = input.command.trim().split(/\s+/).filter(Boolean);
-          if (commandParts.length === 0) {
+          const commandParts = input.command
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
+          if (commandParts.length === 0 || !commandParts[0]) {
             addToolResult({
               toolCallId: toolCall.toolCallId,
               state: "output-error",
@@ -416,25 +467,40 @@ export const Chat = ({ onClose }: ChatProps) => {
             });
             return;
           }
-          
-          const commandName = commandParts[0]!;
+
+          const commandName = commandParts[0];
           const commandArgs = commandParts.slice(1);
-          
-          console.log("Running command:", commandName, "with args:", commandArgs, "in directory:", cwd);
-          
-          const result = await container.webContainer?.spawn(commandName, commandArgs, {
+
+          console.log(
+            "Running command:",
+            commandName,
+            "with args:",
+            commandArgs,
+            "in directory:",
             cwd,
-          });
-          
+          );
+
+          const result = await container.webContainer?.spawn(
+            commandName,
+            commandArgs,
+            {
+              cwd,
+            },
+          );
+
           let output = "";
-          result.output.pipeTo(new WritableStream({ 
-            write(data) { 
-              output += data; 
-            }
-          }));
+          result.output.pipeTo(
+            new WritableStream({
+              write(data) {
+                output += data;
+              },
+            }),
+          );
           await result.exit; // wait for the command to exit
 
-          const slicedOutput = input.outputLimit ? output.slice(0, input.outputLimit) : output;
+          const slicedOutput = input.outputLimit
+            ? output.slice(0, input.outputLimit)
+            : output;
           addToolResult({
             toolCallId: toolCall.toolCallId,
             state: "output-available",
@@ -459,7 +525,7 @@ export const Chat = ({ onClose }: ChatProps) => {
       },
     }),
   });
-  
+
   // Local state for input
   const [input, setInput] = useState("");
   const isLoading = status === "submitted" || status === "streaming";
@@ -473,7 +539,7 @@ export const Chat = ({ onClose }: ChatProps) => {
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
   const attachedFiles = activeSession?.attachedFiles || [];
-  
+
   // Convert AI SDK messages to our local Message format for display
   const messages: Message[] = aiMessages.map((msg) => ({
     role: msg.role as "user" | "assistant",
@@ -491,7 +557,7 @@ export const Chat = ({ onClose }: ChatProps) => {
       (path) => {
         const content = fileSystem.getEditableFileContent(path, true);
         return typeof content === "string" ? content : null;
-      }
+      },
     );
     return file?.path;
   }, [editorState.activeWindow, editorState.windows]);
@@ -540,7 +606,7 @@ export const Chat = ({ onClose }: ChatProps) => {
         // Apply diff to existing file
         const fileContent = fileSystem.getEditableFileContent(
           normalizedPath,
-          true
+          true,
         );
         const currentContent =
           typeof fileContent === "string" ? fileContent : "";
@@ -548,7 +614,7 @@ export const Chat = ({ onClose }: ChatProps) => {
 
         if (!patchedContent) {
           console.error(
-            `[Chat] Failed to apply diff to ${edit.path} (resolved ${normalizedPath})`
+            `[Chat] Failed to apply diff to ${edit.path} (resolved ${normalizedPath})`,
           );
           return;
         }
@@ -566,7 +632,7 @@ export const Chat = ({ onClose }: ChatProps) => {
         source: "external",
       });
       console.log(
-        `[Chat] Applied edit to ${edit.path} (resolved ${normalizedPath})`
+        `[Chat] Applied edit to ${edit.path} (resolved ${normalizedPath})`,
       );
     } catch (error) {
       console.error(`[Chat] Failed to apply edit to ${edit.path}:`, error);
@@ -576,7 +642,7 @@ export const Chat = ({ onClose }: ChatProps) => {
   const handleRejectEdit = (edit: FileEdit) => {
     const normalizedPath = normalizeEditPath(edit.path);
     console.log(
-      `[Chat] Rejected edit to ${edit.path} (resolved ${normalizedPath})`
+      `[Chat] Rejected edit to ${edit.path} (resolved ${normalizedPath})`,
     );
   };
 
@@ -598,7 +664,7 @@ export const Chat = ({ onClose }: ChatProps) => {
               role: "user",
               content: `User: ${firstMessage}\n\nAssistant: ${response.substring(
                 0,
-                200
+                200,
               )}`,
             },
           ],
@@ -650,7 +716,7 @@ export const Chat = ({ onClose }: ChatProps) => {
         const content = fileSystem.getEditableFileContent(filePath, false);
         if (typeof content === "string") {
           fileContents.push(
-            `\n\n--- File: ${filePath} ---\n${content}\n--- End of ${filePath} ---`
+            `\n\n--- File: ${filePath} ---\n${content}\n--- End of ${filePath} ---`,
           );
         }
       }
@@ -743,14 +809,14 @@ export const Chat = ({ onClose }: ChatProps) => {
 
         {/* Sessions Sidebar Dropdown */}
         {showSessions && (
-          <div className="absolute left-3 right-3 top-full z-50 mt-1 max-h-[300px] overflow-y-auto rounded-md border border-border bg-card shadow-lg">
+          <div className="absolute top-full right-3 left-3 z-50 mt-1 max-h-[300px] overflow-y-auto rounded-md border border-border bg-card shadow-lg">
             <div className="space-y-1 p-2">
               {sessions.map((session) => (
                 <div
                   key={session.id}
                   className={cn(
                     "flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 transition-colors hover:bg-muted/50",
-                    session.id === activeSessionId && "bg-muted"
+                    session.id === activeSessionId && "bg-muted",
                   )}
                 >
                   {editingSessionId === session.id ? (
@@ -826,18 +892,19 @@ export const Chat = ({ onClose }: ChatProps) => {
         <div className="space-y-3 p-3">
           {messages.length === 0 && (
             <div className="flex h-full flex-col items-center justify-center px-4 py-12">
-              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 animate-[pingGrow_3.5s_ease-in-out_infinite]">
-                <div className="h-4 w-4 rounded-full bg-primary/20 animate-[pingGrow_3.5s_ease-in-out_infinite]" />
+              <div className="mb-3 flex h-8 w-8 animate-[pingGrow_3.5s_ease-in-out_infinite] items-center justify-center rounded-full bg-primary/10">
+                <div className="h-4 w-4 animate-[pingGrow_3.5s_ease-in-out_infinite] rounded-full bg-primary/20" />
               </div>
               <style jsx global>{`
                 @keyframes pingGrow {
-                  0%, 100% {
+                  0%,
+                  100% {
                     transform: scale(1);
                     opacity: 1;
                   }
                   50% {
                     transform: scale(1.17);
-                    opacity: .9;
+                    opacity: 0.9;
                   }
                 }
               `}</style>
@@ -859,7 +926,9 @@ export const Chat = ({ onClose }: ChatProps) => {
                   <div
                     className={cn(
                       "h-1 w-1 rounded-full",
-                      msg.role === "user" ? "bg-primary" : "bg-muted-foreground"
+                      msg.role === "user"
+                        ? "bg-primary"
+                        : "bg-muted-foreground",
                     )}
                   />
                   <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wide">
@@ -871,7 +940,7 @@ export const Chat = ({ onClose }: ChatProps) => {
                     "rounded-md text-xs leading-relaxed",
                     msg.role === "user"
                       ? "ml-2.5 bg-primary/10 px-3 py-2 text-foreground"
-                      : "ml-2.5 text-foreground/90"
+                      : "ml-2.5 text-foreground/90",
                   )}
                 >
                   <MessageContent
@@ -958,7 +1027,7 @@ export const Chat = ({ onClose }: ChatProps) => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Summarize this file..."
+              placeholder="Ask me anything about your code..."
               className="max-h-[200px] min-h-[80px] resize-none border-0 bg-transparent px-3 pt-3 pb-10 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
             />
 

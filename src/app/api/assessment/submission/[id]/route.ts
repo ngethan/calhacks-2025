@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth.api.getSession({
     headers: request.headers,
@@ -23,7 +23,7 @@ export async function GET(
     const submission = await db.query.assessmentSubmission.findFirst({
       where: and(
         eq(assessmentSubmission.id, id),
-        eq(assessmentSubmission.userId, session.user.id)
+        eq(assessmentSubmission.userId, session.user.id),
       ),
       with: {
         session: true,
@@ -33,7 +33,7 @@ export async function GET(
     if (!submission) {
       return NextResponse.json(
         { error: "Submission not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -64,8 +64,7 @@ export async function GET(
     console.error("Error fetching submission:", error);
     return NextResponse.json(
       { error: "Failed to fetch submission" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-

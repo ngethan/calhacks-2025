@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -14,12 +15,12 @@ import {
   CheckCircle2,
   Clock,
   Code2,
-  Loader2,
   Trophy,
   XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { motion } from "motion/react";
 import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 type GradingResults = {
   overallScore: number;
@@ -58,7 +59,7 @@ type SubmissionData = {
 };
 
 function getGradeColor(
-  grade: string,
+  grade: string
 ): "success" | "warning" | "destructive" | "secondary" {
   switch (grade.toLowerCase()) {
     case "excellent":
@@ -81,21 +82,22 @@ function getGradeColor(
 function getStatusIcon(status: "passed" | "partial" | "failed") {
   switch (status) {
     case "passed":
-      return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+      return <CheckCircle2 className="h-4 w-4 text-green-400" />;
     case "partial":
-      return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+      return <AlertCircle className="h-4 w-4 text-amber-400" />;
     case "failed":
-      return <XCircle className="h-4 w-4 text-red-500" />;
+      return <XCircle className="h-4 w-4 text-red-400" />;
   }
 }
 
 export default function ResultsPage() {
   const searchParams = useSearchParams();
   const submissionId = searchParams.get("submissionId");
-  
+
   const [data, setData] = useState<SubmissionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [gradingProgress, setGradingProgress] = useState(0);
 
   const formatDuration = (start: string, end: string | null) => {
     if (!end) return "N/A";
@@ -116,13 +118,15 @@ export default function ResultsPage() {
 
     const fetchSubmission = async () => {
       try {
-        const response = await fetch(`/api/assessment/submission/${submissionId}`);
-        
+        const response = await fetch(
+          `/api/assessment/submission/${submissionId}`
+        );
+
         if (!response.ok) {
           throw new Error("Failed to fetch submission");
         }
 
-        const submissionData = await response.json() as SubmissionData;
+        const submissionData = (await response.json()) as SubmissionData;
         setData(submissionData);
 
         // If not graded yet, poll every 3 seconds
@@ -141,238 +145,383 @@ export default function ResultsPage() {
     fetchSubmission();
   }, [submissionId]);
 
+  // Animate progress bar while grading
+  useEffect(() => {
+    if (!data || data.gradedAt) return;
+
+    const interval = setInterval(() => {
+      setGradingProgress((prev) => {
+        // Gradually increase progress, slowing down as it approaches 95%
+        const increment = prev < 70 ? 3 : prev < 85 ? 1.5 : 0.5;
+        const next = prev + increment;
+        return next >= 95 ? 95 : next;
+      });
+    }, 300);
+
+    return () => clearInterval(interval);
+  }, [data?.gradedAt, data]);
+
   if (error) {
     return (
-      <div className="flex h-full flex-col items-center justify-center bg-background p-8">
-        <XCircle className="mb-4 h-12 w-12 text-destructive" />
-        <h2 className="mb-2 font-semibold text-xl">Error Loading Results</h2>
-        <p className="text-muted-foreground">{error}</p>
-      </div>
+      <main className="relative min-h-screen overflow-hidden bg-linear-to-br from-slate-950 via-blue-950 to-slate-900">
+        {/* Gradient orbs */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute top-0 right-1/4 h-[500px] w-[500px] rounded-full bg-blue-500/20 blur-[120px]" />
+          <div className="absolute bottom-0 left-1/4 h-[500px] w-[500px] rounded-full bg-purple-500/20 blur-[120px]" />
+        </div>
+
+        <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center"
+          >
+            <XCircle className="mx-auto mb-4 h-12 w-12 text-red-400" />
+            <h2 className="mb-2 font-semibold text-white text-xl">
+              Error Loading Results
+            </h2>
+            <p className="text-white/60">{error}</p>
+          </motion.div>
+        </div>
+      </main>
     );
   }
 
   if (!data || !data.results) {
     return (
-      <div className="flex h-full flex-col items-center justify-center bg-background p-8">
-        <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary" />
-        <h2 className="mb-2 font-semibold text-xl">Grading Your Assessment</h2>
-        <p className="text-center text-muted-foreground">
-          This may take 15-30 seconds. Please wait...
-        </p>
-        {data && (
-          <p className="mt-2 text-muted-foreground text-xs">
-            Submitted at {new Date(data.submittedAt).toLocaleString()}
-          </p>
-        )}
-      </div>
+      <main className="relative min-h-screen overflow-hidden bg-linear-to-br from-slate-950 via-blue-950 to-slate-900">
+        {/* Gradient orbs */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute top-0 right-1/4 h-[500px] w-[500px] rounded-full bg-blue-500/20 blur-[120px]" />
+          <div className="absolute bottom-0 left-1/4 h-[500px] w-[500px] rounded-full bg-purple-500/20 blur-[120px]" />
+        </div>
+
+        <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-md text-center"
+          >
+            <div className="mb-6">
+              <h2 className="mb-2 font-semibold text-white text-xl">
+                Grading Your Assessment
+              </h2>
+              <p className="text-white/60">
+                This may take 15-30 seconds. Please wait...
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-white/60">Progress</span>
+                <span className="font-medium text-white">{Math.round(gradingProgress)}%</span>
+              </div>
+              <Progress
+                value={gradingProgress}
+                className="h-3 bg-white/10"
+              />
+            </div>
+
+            {data && (
+              <p className="mt-6 text-white/40 text-xs">
+                Submitted at {new Date(data.submittedAt).toLocaleString()}
+              </p>
+            )}
+          </motion.div>
+        </div>
+      </main>
     );
   }
 
   const results = data.results;
 
   return (
-    <div className="flex h-full flex-col bg-background">
-      {/* Compact Header */}
-      <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
-        <div>
-          <h2 className="font-semibold text-lg">Assessment Results</h2>
-          <p className="text-muted-foreground text-xs">
-            {data.session.framework === "react-router-v7" ? "React Router v7" : "Next.js"}
-          </p>
-        </div>
-        <Badge
-          variant={getGradeColor(results.overallGrade)}
-          className="px-3 py-1 text-sm"
-        >
-          {results.overallGrade}
-        </Badge>
+    <main className="relative min-h-screen overflow-hidden bg-linear-to-br from-slate-950 via-blue-950 to-slate-900">
+      {/* Gradient orbs */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute top-0 right-1/4 h-[500px] w-[500px] rounded-full bg-blue-500/20 blur-[120px]" />
+        <div className="absolute bottom-0 left-1/4 h-[500px] w-[500px] rounded-full bg-purple-500/20 blur-[120px]" />
       </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
-        {/* Summary Stats - Compact Grid */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-lg border p-3">
-            <div className="mb-1 flex items-center gap-2">
-              <Trophy className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-muted-foreground text-xs">Score</span>
-            </div>
-            <div className="font-bold text-xl">{results.overallScore}%</div>
-            <Progress value={results.overallScore} className="mt-2 h-1.5" />
-          </div>
-
-          <div className="rounded-lg border p-3">
-            <div className="mb-1 flex items-center gap-2">
-              <Code2 className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-muted-foreground text-xs">AI Usage</span>
-            </div>
-            <div className="font-bold text-xl">
-              {results.aiUtilization.effectiveness}%
-            </div>
-            <p className="mt-0.5 text-muted-foreground text-xs">
-              Effectiveness
-            </p>
-          </div>
-
-          <div className="rounded-lg border p-3">
-            <div className="mb-1 flex items-center gap-2">
-              <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-muted-foreground text-xs">Adherence</span>
-            </div>
-            <div className="font-bold text-xl">
-              {results.adherenceToPrompt}%
-            </div>
-            <p className="mt-0.5 text-muted-foreground text-xs">To prompt</p>
-          </div>
-
-          <div className="rounded-lg border p-3">
-            <div className="mb-1 flex items-center gap-2">
-              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-muted-foreground text-xs">Duration</span>
-            </div>
-            <div className="font-bold text-xl">
-              {formatDuration(data.session.startedAt, data.session.completedAt)}
-            </div>
-            <p className="mt-0.5 text-muted-foreground text-xs">
-              {new Date(data.submittedAt).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-
-        {/* Strengths & Areas for Improvement */}
-        {(results.strengths?.length > 0 || results.areasForImprovement?.length > 0) && (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {results.strengths?.length > 0 && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    Strengths
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-1 text-sm">
-                    {results.strengths.map((strength, idx) => (
-                      <li key={idx} className="flex gap-2">
-                        <span className="text-muted-foreground">•</span>
-                        <span>{strength}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
-
-            {results.areasForImprovement?.length > 0 && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <AlertCircle className="h-4 w-4 text-yellow-500" />
-                    Areas for Improvement
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-1 text-sm">
-                    {results.areasForImprovement.map((area, idx) => (
-                      <li key={idx} className="flex gap-2">
-                        <span className="text-muted-foreground">•</span>
-                        <span>{area}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
-
-        {/* Detailed Rubric - Vertical Stack */}
-        <div className="space-y-3">
-          <h3 className="font-semibold text-sm">Detailed Assessment</h3>
-
-          {results.categories.map((item, index) => (
-            <Card key={index} className="overflow-hidden">
-              <CardHeader className="pb-3">
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-1 flex items-center gap-2">
-                        <CardTitle className="text-sm">
-                          {item.name}
-                        </CardTitle>
-                        <Badge
-                          variant={getGradeColor(item.grade)}
-                          className="text-xs"
-                        >
-                          {item.grade}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <div className="font-bold text-2xl">{item.score}%</div>
-                    </div>
+      <div className="relative z-10 min-h-screen px-4 py-12">
+        <div className="mx-auto w-full max-w-6xl space-y-6">
+          {/* Header Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Card className="border-white/10 bg-slate-900/50 backdrop-blur-xl">
+              <CardHeader>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle className="text-2xl text-white">
+                      Assessment Results
+                    </CardTitle>
+                    <CardDescription className="text-white/60">
+                      {data.session.framework === "react-router-v7"
+                        ? "React Router v7"
+                        : "Next.js"}{" "}
+                      • Completed{" "}
+                      {new Date(data.submittedAt).toLocaleDateString()}
+                    </CardDescription>
                   </div>
-                  <Progress value={item.score} className="h-1.5" />
+                  <Badge
+                    variant="secondary"
+                    className="border-white/20 bg-white/10 px-4 py-2 text-lg text-white"
+                  >
+                    {results.overallGrade}
+                  </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3 pt-0">
-                <p className="text-muted-foreground text-xs leading-relaxed">
-                  {item.feedback}
-                </p>
+            </Card>
+          </motion.div>
 
-                {item.criteria?.length > 0 && (
-                  <div className="space-y-1.5">
-                    <p className="font-medium text-xs">Criteria</p>
-                    <div className="space-y-1">
-                      {item.criteria.map((criterion, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center gap-2 text-xs"
-                        >
-                          {getStatusIcon(criterion.status)}
-                          <span className="truncate">{criterion.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+          {/* Summary Stats - Responsive Grid */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="grid grid-cols-2 gap-4 lg:grid-cols-4"
+          >
+            <Card className="border-white/10 bg-slate-900/50 backdrop-blur-xl">
+              <CardContent className="p-6">
+                <div className="mb-2 flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-amber-400" />
+                  <span className="text-sm text-white/60">Overall Score</span>
+                </div>
+                <div className="mb-3 font-bold text-3xl text-white">
+                  {results.overallScore}%
+                </div>
+                <Progress
+                  value={results.overallScore}
+                  className="h-2 bg-white/10"
+                />
               </CardContent>
             </Card>
-          ))}
+
+            <Card className="border-white/10 bg-slate-900/50 backdrop-blur-xl">
+              <CardContent className="p-6">
+                <div className="mb-2 flex items-center gap-2">
+                  <Code2 className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm text-white/60">AI Effectiveness</span>
+                </div>
+                <div className="mb-1 font-bold text-3xl text-white">
+                  {results.aiUtilization.effectiveness}%
+                </div>
+                <p className="text-white/40 text-xs">AI utilization score</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-white/10 bg-slate-900/50 backdrop-blur-xl">
+              <CardContent className="p-6">
+                <div className="mb-2 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-400" />
+                  <span className="text-sm text-white/60">Adherence</span>
+                </div>
+                <div className="mb-1 font-bold text-3xl text-white">
+                  {results.adherenceToPrompt}%
+                </div>
+                <p className="text-white/40 text-xs">To requirements</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-white/10 bg-slate-900/50 backdrop-blur-xl">
+              <CardContent className="p-6">
+                <div className="mb-2 flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-purple-400" />
+                  <span className="text-sm text-white/60">Duration</span>
+                </div>
+                <div className="mb-1 font-bold text-3xl text-white">
+                  {formatDuration(
+                    data.session.startedAt,
+                    data.session.completedAt
+                  )}
+                </div>
+                <p className="text-white/40 text-xs">Time spent</p>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Strengths & Areas for Improvement */}
+          {(results.strengths?.length > 0 ||
+            results.areasForImprovement?.length > 0) && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="grid grid-cols-1 gap-4 lg:grid-cols-2"
+            >
+              {results.strengths?.length > 0 && (
+                <Card className="border-white/10 bg-slate-900/50 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-white">
+                      <CheckCircle2 className="h-5 w-5 text-green-400" />
+                      Strengths
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {results.strengths.map((strength, idx) => (
+                        <li key={idx} className="flex gap-2 text-sm">
+                          <span className="text-white/40">•</span>
+                          <span className="text-white/80">{strength}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+
+              {results.areasForImprovement?.length > 0 && (
+                <Card className="border-white/10 bg-slate-900/50 backdrop-blur-xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-white">
+                      <AlertCircle className="h-5 w-5 text-amber-400" />
+                      Areas for Improvement
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {results.areasForImprovement.map((area, idx) => (
+                        <li key={idx} className="flex gap-2 text-sm">
+                          <span className="text-white/40">•</span>
+                          <span className="text-white/80">{area}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+            </motion.div>
+          )}
+
+          {/* Detailed Rubric */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="space-y-4"
+          >
+            <h3 className="font-semibold text-white text-xl">
+              Detailed Assessment
+            </h3>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {results.categories.map((item, index) => (
+                <Card
+                  key={index}
+                  className="border-white/10 bg-slate-900/50 backdrop-blur-xl"
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="mb-2 flex items-center gap-2">
+                          <CardTitle className="text-white">{item.name}</CardTitle>
+                          <Badge
+                            variant="secondary"
+                            className="border-white/20 bg-white/10 text-white text-xs"
+                          >
+                            {item.grade}
+                          </Badge>
+                        </div>
+                        <Progress
+                          value={item.score}
+                          className="h-2 bg-white/10"
+                        />
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="font-bold text-3xl text-white">
+                          {item.score}%
+                        </div>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-white/70 leading-relaxed">
+                      {item.feedback}
+                    </p>
+
+                    {item.criteria?.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="font-medium text-sm text-white/60">
+                          Criteria
+                        </p>
+                        <div className="space-y-1.5">
+                          {item.criteria.map((criterion, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center gap-2 text-sm"
+                            >
+                              {getStatusIcon(criterion.status)}
+                              <span className="text-white/80">
+                                {criterion.name}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* AI Utilization */}
+          {results.aiUtilization && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <Card className="border-white/10 bg-slate-900/50 backdrop-blur-xl">
+                <CardHeader>
+                  <CardTitle className="text-white">
+                    AI Utilization Analysis
+                  </CardTitle>
+                  <CardDescription className="text-white/60">
+                    How effectively you used AI assistance
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="text-sm text-white/60">Effectiveness</span>
+                    <span className="font-bold text-white text-xl">
+                      {results.aiUtilization.effectiveness}%
+                    </span>
+                  </div>
+                  <Progress
+                    value={results.aiUtilization.effectiveness}
+                    className="mb-4 h-2 bg-white/10"
+                  />
+                  <p className="text-sm text-white/70 leading-relaxed">
+                    {results.aiUtilization.feedback}
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Footer Actions */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            className="flex justify-center pt-4"
+          >
+            <Button
+              onClick={() => {
+                window.location.href = "/";
+              }}
+              size="lg"
+              className="bg-white px-8 text-slate-900 transition-all duration-200 hover:scale-105 hover:bg-white/90"
+            >
+              Start New Assessment
+            </Button>
+          </motion.div>
         </div>
-
-        {/* AI Utilization */}
-        {results.aiUtilization && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">AI Utilization Analysis</CardTitle>
-              <CardDescription className="text-xs">
-                How effectively you used AI assistance
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-muted-foreground text-xs">Effectiveness</span>
-                <span className="font-bold">{results.aiUtilization.effectiveness}%</span>
-              </div>
-              <Progress value={results.aiUtilization.effectiveness} className="mb-3 h-2" />
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                {results.aiUtilization.feedback}
-              </p>
-            </CardContent>
-          </Card>
-        )}
       </div>
-
-      {/* Footer Actions - Sticky */}
-      <div className="shrink-0 space-y-2 border-t px-4 py-3">
-        <button
-          onClick={() => window.location.href = "/assessment"}
-          className="w-full rounded-md bg-primary px-3 py-2 text-primary-foreground text-sm transition-colors hover:bg-primary/90"
-        >
-          Start New Assessment
-        </button>
-      </div>
-    </div>
+    </main>
   );
 }

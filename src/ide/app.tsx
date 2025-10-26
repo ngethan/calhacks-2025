@@ -17,6 +17,7 @@ import {
 import { SidebarProvider } from "@/components/ui/sidebar";
 import XTermConsole from "@/components/xterm-console";
 import { useAssessment } from "@/hooks/use-assessment";
+import { useRubricGenerator } from "@/hooks/use-rubric-generator";
 import { Chat } from "@/ide/chat";
 import { IDEEditor, useEditorState } from "@/ide/editor";
 import { IFrame } from "@/ide/iframe";
@@ -40,6 +41,9 @@ const AppContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const assessment = useAssessment();
+
+  // Generate rubric on mount if not already generated
+  useRubricGenerator();
 
   // Check for GitHub OAuth callback
   useEffect(() => {
@@ -114,35 +118,24 @@ const AppContent = () => {
 
       toast.info("Collecting your code...");
 
-      // Collect all files from the file system
-      const files: Record<string, string> = {};
-      
-      async function readDirectory(path: string) {
-        try {
-          const entries = await container.instance.fs.readdir(path, { withFileTypes: true });
-          
-          for (const entry of entries) {
-            const fullPath = path === '/' ? `/${entry.name}` : `${path}/${entry.name}`;
-            
-            if (entry.isDirectory()) {
-              await readDirectory(fullPath);
-            } else if (entry.isFile()) {
-              try {
-                const content = await container.instance.fs.readFile(fullPath, 'utf-8');
-                files[fullPath] = content;
-              } catch (err) {
-                console.warn(`Could not read file ${fullPath}:`, err);
-              }
-            }
-          }
-        } catch (err) {
-          console.warn(`Could not read directory ${path}:`, err);
-        }
+      // Use the same file collection method as GitHub export
+      const { collectFilesForExport } = await import("@/lib/github-export");
+      const filesList = await collectFilesForExport();
+
+      if (filesList.length === 0) {
+        throw new Error(
+          "No files found to submit. Please write some code first.",
+        );
       }
 
-      await readDirectory('/');
+      // Convert to Record<string, string> format expected by the API
+      const files: Record<string, string> = {};
+      for (const file of filesList) {
+        files[file.path] = file.content;
+      }
 
-      console.log(`Collected ${Object.keys(files).length} files`);
+      console.log(`[Submit] Collected ${Object.keys(files).length} files`);
+      console.log("[Submit] File paths:", Object.keys(files).slice(0, 10)); // Log first 10 for debugging
 
       // Submit the code
       const response = await fetch("/api/assessment/submit", {
@@ -162,15 +155,19 @@ const AppContent = () => {
       }
 
       const { submission } = await response.json();
-      
-      toast.success("Assessment submitted! Redirecting to results...");
-      
+
+      toast.success("Assessment submitted successfully!", {
+        description: "Your code is being graded. Redirecting to results...",
+      });
+
       // Redirect to results page
-      router.push(`/results?submissionId=${submission.id}`);
+      setTimeout(() => {
+        router.push(`/results?submissionId=${submission.id}`);
+      }, 1000);
     } catch (error) {
       console.error("Error submitting assessment:", error);
       toast.error(
-        error instanceof Error ? error.message : "Failed to submit assessment"
+        error instanceof Error ? error.message : "Failed to submit assessment",
       );
       setIsSubmitting(false);
     }
@@ -189,7 +186,7 @@ const AppContent = () => {
         </div>
         <p
           className={
-            assessment.isExpired ? "text-destructive font-semibold" : ""
+            assessment.isExpired ? "font-semibold text-destructive" : ""
           }
         >
           {assessment.timeRemaining} left

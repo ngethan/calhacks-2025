@@ -12,24 +12,24 @@ async function triggerGrading(submissionId: string, authHeaders: Headers) {
   try {
     // Call the grade endpoint with auth headers
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/assessment/grade`,
+      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/assessment/grade`,
       {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Cookie': authHeaders.get('cookie') || '',
+          "Content-Type": "application/json",
+          Cookie: authHeaders.get("cookie") || "",
         },
         body: JSON.stringify({ submissionId }),
-      }
+      },
     );
 
     if (!response.ok) {
-      console.error('[Submit API] Grading failed:', await response.text());
+      console.error("[Submit API] Grading failed:", await response.text());
     } else {
-      console.log('[Submit API] ✅ Grading triggered successfully');
+      console.log("[Submit API] ✅ Grading triggered successfully");
     }
   } catch (error) {
-    console.error('[Submit API] Error triggering grading:', error);
+    console.error("[Submit API] Error triggering grading:", error);
   }
 }
 
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log('[Submit API] Creating submission for session:', sessionId);
+    console.log("[Submit API] Creating submission for session:", sessionId);
 
     // Create submission
     const submission = await db
@@ -90,17 +90,17 @@ export async function POST(request: Request) {
       })
       .where(eq(assessmentSession.id, sessionId));
 
-    const submissionId = submission[0]!.id;
-    console.log('[Submit API] Submission created:', submissionId);
+    const submissionId = submission[0]?.id;
+    console.log("[Submit API] Submission created:", submissionId);
 
     // Trigger grading in background (don't await) - pass request headers for auth
-    triggerGrading(submissionId, request.headers).catch(err => 
-      console.error('[Submit API] Background grading error:', err)
+    triggerGrading(submissionId, request.headers).catch((err) =>
+      console.error("[Submit API] Background grading error:", err),
     );
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       submission: submission[0],
-      message: "Submission received. Grading in progress..."
+      message: "Submission received. Grading in progress...",
     });
   } catch (error) {
     console.error("Error submitting assessment:", error);

@@ -1,11 +1,11 @@
-import dynamic from "next/dynamic";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { AssessmentProvider } from "@/contexts/assessment-context";
+import { auth } from "@/lib/auth";
 import { db } from "@/server/db";
 import { assessmentSession } from "@/server/db/schema/assessment-schema";
 import { and, eq } from "drizzle-orm";
+import dynamic from "next/dynamic";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 const App = dynamic(() => import("@/ide/app"));
 
@@ -22,7 +22,7 @@ export default async function IDEPage() {
   const activeAssessment = await db.query.assessmentSession.findFirst({
     where: and(
       eq(assessmentSession.userId, session.user.id),
-      eq(assessmentSession.status, "active")
+      eq(assessmentSession.status, "active"),
     ),
   });
 

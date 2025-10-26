@@ -7,22 +7,25 @@ import { Editor, type Monaco, loader } from "@monaco-editor/react";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useRef } from "react";
 
-loader.init().then((monaco) => {
-  monaco.editor.defineTheme("runway-dark", {
-    base: "vs-dark",
-    inherit: true,
-    rules: [],
-    colors: {
-      "editor.background": "#282c34",
-      "editor.foreground": "#abb2bf",
-      "editorLineNumber.foreground": "#5c6370",
-      "editorLineNumber.activeForeground": "#abb2bf",
-      "editorCursor.foreground": "#528bff",
-      "editor.selectionBackground": "#3e4451",
-      "editor.inactiveSelectionBackground": "#3a3f4b",
-    },
+// Initialize Monaco theme only on client side
+if (typeof window !== "undefined") {
+  loader.init().then((monaco) => {
+    monaco.editor.defineTheme("runway-dark", {
+      base: "vs-dark",
+      inherit: true,
+      rules: [],
+      colors: {
+        "editor.background": "#282c34",
+        "editor.foreground": "#abb2bf",
+        "editorLineNumber.foreground": "#5c6370",
+        "editorLineNumber.activeForeground": "#abb2bf",
+        "editorCursor.foreground": "#528bff",
+        "editor.selectionBackground": "#3e4451",
+        "editor.inactiveSelectionBackground": "#3a3f4b",
+      },
+    });
   });
-});
+}
 
 type MonacoEditor = Parameters<
   NonNullable<Parameters<typeof Editor>[0]["onMount"]>

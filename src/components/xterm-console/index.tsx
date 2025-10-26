@@ -17,44 +17,22 @@ export const TerminalStateProvider = createContext<{
 
 const XTermConsole = () => {
   const termRef = useRef<HTMLDivElement>(null);
-  const term = useRef<Terminal>(
-    new Terminal({
-      convertEol: true,
-      theme: {
-        background: "#282c34",
-        foreground: "#abb2bf",
-        cursor: "#528bff",
-        selectionBackground: "#3e4451",
-        selectionInactiveBackground: "#3e4451",
-        black: "#282c34",
-        brightBlack: "#5c6370",
-        red: "#e06c75",
-        brightRed: "#be5046",
-        green: "#98c379",
-        brightGreen: "#98c379",
-        yellow: "#e5c07b",
-        brightYellow: "#d19a66",
-        blue: "#61afef",
-        brightBlue: "#61afef",
-        magenta: "#c678dd",
-        brightMagenta: "#c678dd",
-        cyan: "#56b6c2",
-        brightCyan: "#56b6c2",
-        white: "#abb2bf",
-        brightWhite: "#ffffff",
-      },
-    }),
-  );
-  const fitAddon = useRef<FitAddon>(new FitAddon());
+  const term = useRef<Terminal | null>(null);
+  const fitAddon = useRef<FitAddon | null>(null);
+
   const { status, shellProcess, addListener, removeListener } =
     useWebContainer();
   useEffect(() => {
-    term.current.write(`\x1b[34m[WebContainer]\x1b[0m ${status}\n`);
+    if (term.current) {
+      term.current.write(`\x1b[34m[WebContainer]\x1b[0m ${status}\n`);
+    }
   }, [status]);
 
   const resize = useCallback(() => {
-    fitAddon.current.fit();
-    if (shellProcess) {
+    if (fitAddon.current) {
+      fitAddon.current.fit();
+    }
+    if (shellProcess && term.current) {
       shellProcess.resize({
         cols: term.current.cols,
         rows: term.current.rows,
@@ -63,7 +41,36 @@ const XTermConsole = () => {
   }, [shellProcess]);
 
   useEffect(() => {
-    if (termRef.current) {
+    if (termRef.current && !term.current) {
+      // Initialize Terminal and FitAddon only on client side
+      term.current = new Terminal({
+        convertEol: true,
+        theme: {
+          background: "#282c34",
+          foreground: "#abb2bf",
+          cursor: "#528bff",
+          selectionBackground: "#3e4451",
+          selectionInactiveBackground: "#3e4451",
+          black: "#282c34",
+          brightBlack: "#5c6370",
+          red: "#e06c75",
+          brightRed: "#be5046",
+          green: "#98c379",
+          brightGreen: "#98c379",
+          yellow: "#e5c07b",
+          brightYellow: "#d19a66",
+          blue: "#61afef",
+          brightBlue: "#61afef",
+          magenta: "#c678dd",
+          brightMagenta: "#c678dd",
+          cyan: "#56b6c2",
+          brightCyan: "#56b6c2",
+          white: "#abb2bf",
+          brightWhite: "#ffffff",
+        },
+      });
+      fitAddon.current = new FitAddon();
+
       const terminal = term.current;
       terminal.loadAddon(fitAddon.current);
       terminal.loadAddon(new WebLinksAddon());
@@ -98,7 +105,9 @@ const XTermConsole = () => {
 
   useEffect(() => {
     const shellOutputListenerId = addListener("shell-output", (data) => {
-      term.current.write(data);
+      if (term.current) {
+        term.current.write(data);
+      }
     });
 
     return () => {
@@ -107,7 +116,7 @@ const XTermConsole = () => {
   }, [addListener, removeListener]);
 
   useEffect(() => {
-    if (shellProcess) {
+    if (shellProcess && term.current) {
       if (shellProcess.input.locked) {
         term.current.write("Input is locked\n");
         return;
