@@ -17,12 +17,11 @@ type WebContainerStatus = "booting" | "ready" | "error";
 
 // Framework initialization scripts
 const FRAMEWORK_INIT_COMMANDS: Record<string, string[]> = {
-  "react-router-v7": ["npm install", "npm run dev"],
+  "react-router-v7": [
+    "npx -y create-react-router@latest coding-challenge -y && cd coding-challenge",
+  ],
   nextjs: [
-    "npx create-next-app@latest coding-challenge -y",
-    "y",
-    "",
-    "cd coding-challenge",
+    "pnpm create next-app@15.5.6 coding-challenge --yes && cd coding-challenge && pnpm run dev",
   ],
 };
 
@@ -95,7 +94,7 @@ export const WebContainerProvider = ({
   useEffect(() => {
     if (status.current === "booting") {
       status.current = "ready";
-      fileSystem.init().then(() => {
+      fileSystem.init(sessionId || "default", userId || "default").then(() => {
         WebContainer.boot({ workdirName: "workspace" }).then(
           async (instance) => {
             await fileSystem.mountWebContainer(instance);

@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { IFrameProvider } from "./iframe-context";
 
 const App = () => {
+  if (!window) return null;
   const [showChat, setShowChat] = useState(true);
   const [chatWidth, setChatWidth] = useState(25);
   const editorState = useEditorState();
@@ -37,7 +38,6 @@ const App = () => {
     window.location.href = "/api/github/oauth";
   };
 
-  if (!window) return null;
   
   return (
     <WebContainerProvider>
