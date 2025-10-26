@@ -11,6 +11,7 @@ export type ChatSession = {
   id: string;
   name: string;
   messages: Message[];
+  attachedFiles: string[]; // Persisted attached file paths
   createdAt: number;
   updatedAt: number;
 };
@@ -27,6 +28,9 @@ type ChatState = {
   addMessage: (sessionId: string, message: Message) => void;
   updateLastMessage: (sessionId: string, content: string) => void;
   clearSession: (sessionId: string) => void;
+  setAttachedFiles: (sessionId: string, files: string[]) => void;
+  addAttachedFile: (sessionId: string, filePath: string) => void;
+  removeAttachedFile: (sessionId: string, filePath: string) => void;
 };
 
 export const useChatStore = create<ChatState>()(
@@ -50,6 +54,7 @@ export const useChatStore = create<ChatState>()(
             id,
             name: sessionName,
             messages: [],
+            attachedFiles: [],
             createdAt: now,
             updatedAt: now,
           });
@@ -120,6 +125,52 @@ export const useChatStore = create<ChatState>()(
           const session = state.sessions.find((s) => s.id === sessionId);
           if (session) {
             session.messages = [];
+            session.updatedAt = Date.now();
+          }
+        });
+      },
+
+      setAttachedFiles: (sessionId: string, files: string[]) => {
+        set((state) => {
+          const session = state.sessions.find((s) => s.id === sessionId);
+          if (session) {
+            // Initialize attachedFiles if it doesn't exist (for backward compatibility)
+            if (!session.attachedFiles) {
+              session.attachedFiles = [];
+            }
+            session.attachedFiles = files;
+            session.updatedAt = Date.now();
+          }
+        });
+      },
+
+      addAttachedFile: (sessionId: string, filePath: string) => {
+        set((state) => {
+          const session = state.sessions.find((s) => s.id === sessionId);
+          if (session) {
+            // Initialize attachedFiles if it doesn't exist (for backward compatibility)
+            if (!session.attachedFiles) {
+              session.attachedFiles = [];
+            }
+            if (!session.attachedFiles.includes(filePath)) {
+              session.attachedFiles.push(filePath);
+              session.updatedAt = Date.now();
+            }
+          }
+        });
+      },
+
+      removeAttachedFile: (sessionId: string, filePath: string) => {
+        set((state) => {
+          const session = state.sessions.find((s) => s.id === sessionId);
+          if (session) {
+            // Initialize attachedFiles if it doesn't exist (for backward compatibility)
+            if (!session.attachedFiles) {
+              session.attachedFiles = [];
+            }
+            session.attachedFiles = session.attachedFiles.filter(
+              (f) => f !== filePath,
+            );
             session.updatedAt = Date.now();
           }
         });
