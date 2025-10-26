@@ -24,18 +24,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify the session belongs to the user and is active
-    const activeSession = await db.query.assessmentSession.findFirst({
+    // Verify the session belongs to the user (don't check status - it might be completed by now)
+    const session_data = await db.query.assessmentSession.findFirst({
       where: and(
         eq(assessmentSession.id, sessionId),
         eq(assessmentSession.userId, session.user.id),
-        eq(assessmentSession.status, "active"),
       ),
     });
 
-    if (!activeSession) {
+    if (!session_data) {
       return NextResponse.json(
-        { error: "Active assessment session not found" },
+        { error: "Assessment session not found" },
         { status: 404 },
       );
     }
