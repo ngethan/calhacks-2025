@@ -119,8 +119,9 @@ const AppContent = () => {
       
       async function readDirectory(path: string) {
         try {
-          const entries = await container.instance.fs.readdir(path, { withFileTypes: true });
-          
+          const entries = await container.webContainer?.fs.readdir(path, { withFileTypes: true });
+          if (!entries) return;
+
           for (const entry of entries) {
             const fullPath = path === '/' ? `/${entry.name}` : `${path}/${entry.name}`;
             
@@ -128,8 +129,9 @@ const AppContent = () => {
               await readDirectory(fullPath);
             } else if (entry.isFile()) {
               try {
-                const content = await container.instance.fs.readFile(fullPath, 'utf-8');
-                files[fullPath] = content;
+                const content = await container.webContainer?.fs.readFile(fullPath, 'utf-8');
+                if (!content) return;
+                files[fullPath] = content as string;
               } catch (err) {
                 console.warn(`Could not read file ${fullPath}:`, err);
               }

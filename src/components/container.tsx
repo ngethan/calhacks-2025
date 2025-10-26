@@ -140,12 +140,19 @@ export const WebContainerProvider = ({
                 },
               }),
             );
-            if (framework) {
-              FRAMEWORK_INIT_COMMANDS[framework]?.forEach((command) => {
+            // const alreadyInitialized = await instance.fs.readdir("/coding-challenge").then((files) => files.length > 0).catch(() => false);
+            // console.log("alreadyInitialized", alreadyInitialized);
+            const alreadyInitialized = localStorage.getItem("alreadyInitialized_" + sessionId + "_" + userId) === "true";
+            if (framework && !alreadyInitialized) {
+              localStorage.setItem("alreadyInitialized_" + sessionId + "_" + userId , "true");
+              const commands = FRAMEWORK_INIT_COMMANDS[framework];
+              if (commands) {
                 const writer = shellProcess.input.getWriter();
-                writer.write(command + "\n");
+                for (const command of commands) {
+                  writer.write(command + "\n");
+                }
                 writer.releaseLock();
-              });
+              }
             }
 
             // Set the global instance
