@@ -19,7 +19,7 @@ export const EditorTab = ({ path, index, windowIndex, showFullPath }: { path: st
   return (
     <TabsPrimitive.Trigger key={path} value={index + ""} className="p-2 flex flex-row gap-2 data-[state=active]:bg-editor-background hover:bg-sidebar-accent bg-sidebar border-t border-x border-sidebar-accent place-items-center max-w-[250px] min-w-0">
       <FileIcon node={{ file: { size: 0, isBinary: false } }} name={name} className="shrink-0" />
-      <span className="truncate flex-1 min-w-0" title={path}>
+      <span className="truncate flex-1 min-w-0 text-sm" title={path}>
         {name}
       </span>
       <div onClick={(e) => {
