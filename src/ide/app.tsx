@@ -1,6 +1,7 @@
 "use client";
 
 import { WebContainerProvider, useWebContainer } from "@/components/container";
+import { GitHubExportDialog } from "@/components/github-export-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,20 +22,70 @@ import { IFrame } from "@/ide/iframe";
 import { IDESidebar } from "@/ide/sidebar";
 import { IDESidebarContent } from "@/ide/sidebar/content";
 import { Eye, Github, Loader2, Menu, MessageSquare, Send } from "lucide-react";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { IFrameProvider } from "./iframe-context";
-import { useRouter } from "next/navigation";
 
 const AppContent = () => {
   const [showChat, setShowChat] = useState(true);
   const [chatWidth, setChatWidth] = useState(25);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showGitHubDialog, setShowGitHubDialog] = useState(false);
+  const [isGitHubAuthenticated, setIsGitHubAuthenticated] = useState(false);
   const editorState = useEditorState();
   const container = useWebContainer();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Check for GitHub OAuth callback
+  useEffect(() => {
+    const githubSuccess = searchParams.get("github_success");
+    const githubError = searchParams.get("github_error");
+
+    if (githubSuccess === "true") {
+      setIsGitHubAuthenticated(true);
+      toast.success("Connected to GitHub successfully!");
+      // Show the export dialog
+      setShowGitHubDialog(true);
+      // Clean up URL
+      window.history.replaceState({}, "", "/ide");
+    } else if (githubError) {
+      toast.error("Failed to connect to GitHub", {
+        description: `Error: ${githubError}`,
+      });
+      // Clean up URL
+      window.history.replaceState({}, "", "/ide");
+    }
+  }, [searchParams]);
+
+  // Check if already authenticated on mount
+  useEffect(() => {
+    // Check if the github_access_token cookie exists
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/github/check-auth");
+        if (response.ok) {
+          const data = await response.json();
+          setIsGitHubAuthenticated(data.authenticated);
+        }
+      } catch (error) {
+        console.error("Failed to check GitHub auth:", error);
+      }
+    };
+    checkAuth();
+  }, []);
 
   const handleExportToGithub = () => {
+    if (isGitHubAuthenticated) {
+      setShowGitHubDialog(true);
+    } else {
+      setShowGitHubDialog(true);
+    }
+  };
+
+  const handleGitHubAuth = () => {
     toast.info("Connecting to GitHub...");
     window.location.href = "/api/github/oauth";
   };
@@ -126,7 +177,7 @@ const AppContent = () => {
   return (
     <div className="flex h-screen flex-col">
       <div className="flex shrink-0 items-center justify-between gap-2 border-border border-b bg-sidebar px-4 py-2">
-        <div className="flex gap-2 items-center">
+        <div className="flex items-center gap-2">
           <img
             src="/logo.png"
             alt="Aligned Logo"
@@ -245,7 +296,12 @@ const AppContent = () => {
           <IDESidebar />
           <IFrameProvider>
             <ResizablePanelGroup direction="horizontal">
-              <ResizablePanel defaultSize={15} minSize={12} maxSize={30}>
+              <ResizablePanel
+                defaultSize={15}
+                minSize={12}
+                maxSize={30}
+                collapsible
+              >
                 <IDESidebarContent />
               </ResizablePanel>
               <ResizableHandle />
@@ -254,7 +310,7 @@ const AppContent = () => {
                   <ResizablePanel>
                     <ResizablePanelGroup
                       direction="vertical"
-                      className="h-full max-h-screen min-h-screen"
+                      className="h-full max-h-screen"
                     >
                       <ResizablePanel>
                         <ResizablePanelGroup direction="horizontal">
@@ -286,6 +342,12 @@ const AppContent = () => {
           </IFrameProvider>
         </SidebarProvider>
       </div>
+      <GitHubExportDialog
+        open={showGitHubDialog}
+        onOpenChange={setShowGitHubDialog}
+        isAuthenticated={isGitHubAuthenticated}
+        onAuthClick={handleGitHubAuth}
+      />
     </div>
   );
 };

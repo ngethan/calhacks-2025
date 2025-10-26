@@ -1,7 +1,7 @@
 import { env } from "@/env";
 import { auth } from "@/lib/auth";
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText } from "ai";
+import { type UIMessage, convertToModelMessages, streamText, tool } from "ai";
 import { z } from "zod";
 
 const openrouter = createOpenAI({
@@ -10,12 +10,7 @@ const openrouter = createOpenAI({
 });
 
 const requestSchema = z.object({
-  messages: z.array(
-    z.object({
-      role: z.enum(["user", "assistant", "system"]),
-      content: z.string(),
-    }),
-  ),
+  messages: z.array(z.any()), // UIMessage array from useChat
   currentFile: z
     .object({
       path: z.string(),
@@ -23,6 +18,96 @@ const requestSchema = z.object({
     })
     .optional(),
 });
+
+// Tool for editing files with patches
+const tools = {
+  listFiles: tool({
+    description: "List files in a directory",
+    inputSchema: z.object({
+      path: z.string().describe("The path to list files from"),
+    }),
+  }),
+  readFile: tool({
+    description: "Read a file",
+    inputSchema: z.object({
+      path: z.string().describe("The path to read the file from"),
+    }),
+  }),
+  createFile: tool({
+    description: "Create a file",
+    inputSchema: z.object({
+      path: z.string().describe("The path to create the file at"),
+      content: z.string().describe("The content of the file"),
+    }),
+  }),
+  createFolder: tool({
+    description: "Create a folder",
+    inputSchema: z.object({
+      path: z.string().describe("The path to create the folder at"),
+    }),
+  }),
+  runCommand: tool({
+    description: "Run a command",
+    inputSchema: z.object({
+      command: z.string().describe("The command to run"),
+      cwd: z
+        .string()
+        .describe("The working directory to run the command in")
+        .optional(),
+      outputLimit: z
+        .number()
+        .default(1000)
+        .describe("The maximum number of characters to return in the output")
+        .optional(),
+    }),
+    outputSchema: z
+      .string()
+      .describe("The output of the command (sliced to the outputLimit)"),
+  }),
+  editFileWithPatch: tool({
+    description: `Edit a file by applying a unified diff patch. Use this tool when you want to suggest changes to code files. 
+    
+The patch should be in unified diff format with:
+- File paths (--- and +++)
+- Hunk headers (@@ -start,count +start,count @@)
+- Context lines (starting with space)
+- Removed lines (starting with -)
+- Added lines (starting with +)
+
+Include 3+ lines of context before and after changes for accurate patching.`,
+    inputSchema: z.object({
+      path: z
+        .string()
+        .describe("The file path to edit (e.g., /src/app/page.tsx)"),
+      diff: z.string().describe(`The unified diff patch to apply. Example:
+--- /src/app/page.tsx
++++ /src/app/page.tsx
+@@ -1,5 +1,5 @@
+ export default function Home() {
+-  return <div>Hello</div>
++  return <div>Hello World</div>
+ }
+`),
+      explanation: z
+        .string()
+        .describe("Brief explanation of what changes are being made and why"),
+    }),
+    execute: async ({ path, diff, explanation }) => {
+      // This is executed on the server - we return the edit info
+      // The client will handle actually applying it
+      return {
+        path,
+        diff,
+        explanation,
+        status: "pending_approval",
+        message: `Suggested edit to ${path}: ${explanation}`,
+      };
+    },
+  }),
+};
+
+// Allow streaming responses up to 30 seconds
+export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
@@ -41,22 +126,14 @@ export async function POST(req: Request) {
       "messages",
     );
 
-    // Log each message to debug
-    body.messages?.forEach(
-      (msg: { role: string; content: string }, idx: number) => {
-        console.log(`[API] Message ${idx}:`, {
-          role: msg.role,
-          contentType: typeof msg.content,
-          isArray: Array.isArray(msg.content),
-          contentPreview:
-            typeof msg.content === "string"
-              ? msg.content.substring(0, 100)
-              : JSON.stringify(msg.content).substring(0, 100),
-        });
-      },
-    );
+    const {
+      messages,
+      currentFile,
+    }: {
+      messages: UIMessage[];
+      currentFile?: { path: string; content: string };
+    } = requestSchema.parse(body);
 
-    const { messages, currentFile } = requestSchema.parse(body);
     console.log("[API] Parsed successfully. Current file:", currentFile?.path);
 
     // Build system prompt with file context
@@ -70,76 +147,41 @@ Current file being edited:
 ${currentFile.content}
 \`\`\`
 
-When suggesting code changes:
-1. Provide clear explanations of what you're changing and why
-2. Use unified diff format for changes (this is more efficient than sending full files)
-3. For file edits, use this exact format:
+When suggesting code changes, you MUST use the editFileWithPatch tool:
+1. Call editFileWithPatch with the file path, diff patch, and explanation
+2. The diff should be in unified diff format with:
+   - File paths (--- and +++)
+   - Hunk headers (@@ -start,count +start,count @@)
+   - Context lines (starting with space)
+   - Removed lines (starting with -)
+   - Added lines (starting with +)
+3. Include at least 3 lines of context before and after changes
+4. Provide a clear explanation of what you're changing and why
 
-<file_edit>
-<path>${currentFile.path}</path>
-<diff>
---- ${currentFile.path}
-+++ ${currentFile.path}
-@@ -start_line,num_lines +start_line,num_lines @@
- context line
--removed line
-+added line
- context line
-</diff>
-</file_edit>
+Example tool call:
+{
+  "path": "${currentFile.path}",
+  "diff": "--- ${currentFile.path}\\n+++ ${currentFile.path}\\n@@ -10,3 +10,3 @@\\n function test() {\\n-  return false;\\n+  return true;\\n }",
+  "explanation": "Changed return value from false to true to fix the logic"
+}
 
-IMPORTANT:
-- Use proper unified diff format with @@ headers
-- Include at least 3 lines of context before and after changes
-- Multiple hunks are allowed for changes in different parts of the file
-- If you're creating a new file or the changes are extensive (>50% of file), you can use <content> instead of <diff>
+The user can then accept or reject your suggested changes in the UI.`
+      : "You are an AI coding assistant. Help the user with their coding questions. When you need to suggest code changes, use the editFileWithPatch tool.";
 
-The user can then accept or reject your suggested changes.`
-      : "You are an AI coding assistant. Help the user with their coding questions.";
+    console.log("[API] Converting messages for model...");
 
-    console.log(
-      "[API] Calling OpenRouter with",
-      messages.length + 1,
-      "total messages",
-    );
-
-    // Log the actual messages being sent to streamText
-    const messagesToSend = [
-      {
-        role: "system" as const,
-        content: systemPrompt,
-      },
-      ...messages,
-    ];
-
-    console.log("[API] Messages to send to OpenRouter:");
-    messagesToSend.forEach((msg, idx) => {
-      console.log(
-        `  ${idx}: role=${
-          msg.role
-        }, contentType=${typeof msg.content}, isArray=${Array.isArray(
-          msg.content,
-        )}, contentLength=${msg.content.length}`,
-      );
+    const result = streamText({
+      model: openrouter.chat("anthropic/claude-3.5-sonnet"),
+      system: systemPrompt,
+      messages: convertToModelMessages(messages),
+      tools,
+      abortSignal: req.signal, // Support abort
     });
 
-    try {
-      const result = streamText({
-        model: openrouter.chat("anthropic/claude-3.5-sonnet"),
-        messages: messagesToSend,
-      });
+    console.log("[API] Stream created, returning UI message stream response");
 
-      console.log("[API] Stream created, returning response");
-      // Return the text stream
-      return result.toTextStreamResponse();
-    } catch (streamError) {
-      console.error("[API] streamText error:", streamError);
-      console.error(
-        "[API] streamText error details:",
-        JSON.stringify(streamError, null, 2),
-      );
-      throw streamError;
-    }
+    // Return the UI message stream (proper AI SDK format)
+    return result.toUIMessageStreamResponse();
   } catch (error) {
     console.error("[API] Chat error:", error);
     if (error instanceof z.ZodError) {

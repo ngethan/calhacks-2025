@@ -123,7 +123,7 @@ export const useEditorState = create<EditorState>()(
     closeOtherTabs: (window: number, keepIndex: number) => {
       set((state) => {
         const w = state.windows[window];
-        if (w && w.tabs[keepIndex]) {
+        if (w?.tabs[keepIndex]) {
           const keepTab = w.tabs[keepIndex];
           w.tabs = [keepTab];
           w.activeTab = 0;
@@ -150,7 +150,7 @@ export const useEditorState = create<EditorState>()(
         }
       });
     },
-  }))
+  })),
   // {
   //   name: "runway-editor-state",
   //   storage: createJSONStorage(() => localStorage),
