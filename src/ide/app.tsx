@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/resizable";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import XTermConsole from "@/components/xterm-console";
+import { useAssessment } from "@/hooks/use-assessment";
 import { Chat } from "@/ide/chat";
 import { IDEEditor, useEditorState } from "@/ide/editor";
 import { IFrame } from "@/ide/iframe";
@@ -29,12 +30,15 @@ const App = () => {
   const [showChat, setShowChat] = useState(true);
   const [chatWidth, setChatWidth] = useState(25);
   const editorState = useEditorState();
+  const assessment = useAssessment();
 
   const handleExportToGithub = () => {
     toast.info("Connecting to GitHub...");
     window.location.href = "/api/github/oauth";
   };
 
+  if (!window) return null;
+  
   return (
     <WebContainerProvider>
       <div className="flex h-screen flex-col">
@@ -47,7 +51,13 @@ const App = () => {
             />
             <p className="font-mono">vibecheck</p>
           </div>
-          <p>Recipe App (10:23 left)</p>
+          <p
+            className={
+              assessment.isExpired ? "text-destructive font-semibold" : ""
+            }
+          >
+            {assessment.timeRemaining} left
+          </p>
           <div className="flex items-center gap-1">
             {/* Mobile menu - shows on screens smaller than lg */}
             <div className="flex gap-1 lg:hidden">
@@ -138,7 +148,12 @@ const App = () => {
             <IDESidebar />
             <IFrameProvider>
               <ResizablePanelGroup direction="horizontal">
-                <ResizablePanel defaultSize={15} minSize={12} maxSize={30} collapsible>
+                <ResizablePanel
+                  defaultSize={15}
+                  minSize={12}
+                  maxSize={30}
+                  collapsible
+                >
                   <IDESidebarContent />
                 </ResizablePanel>
                 <ResizableHandle />
