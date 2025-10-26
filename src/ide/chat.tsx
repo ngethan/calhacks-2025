@@ -418,7 +418,9 @@ export const Chat = ({ onClose }: ChatProps) => {
         });
       } else if (toolCall.toolName === "readFile") {
         const input = toolCall.input as { path: string };
+        console.log("Reading file");
         const file = await container.webContainer?.fs.readFile(input.path);
+        console.log("File read", file);
         addToolResult({
           toolCallId: toolCall.toolCallId,
           state: "output-available",

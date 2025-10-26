@@ -142,31 +142,31 @@ export const WebContainerProvider = ({
             );
 
             // Check if coding-challenge directory already exists in the workspace
-            if (framework) {
-              const commands = FRAMEWORK_INIT_COMMANDS[framework];
-              if (commands) {
-                try {
-                  await instance.fs.readdir("/home/workspace/coding-challenge");
-                  // Directory exists, just cd into it and skip initialization
-                  console.log(
-                    "coding-challenge directory already exists, skipping initialization",
-                  );
-                  const writer = shellProcess.input.getWriter();
-                  writer.write("cd coding-challenge\n");
-                  writer.releaseLock();
-                } catch (error) {
-                  // Directory doesn't exist, run initialization commands
-                  console.log(
-                    "coding-challenge directory not found, running initialization commands",
-                  );
-                  const writer = shellProcess.input.getWriter();
-                  for (const command of commands) {
-                    writer.write(`${command}\n`);
-                  }
-                  writer.releaseLock();
-                }
-              }
-            }
+            // if (framework && false) {
+            //   const commands = FRAMEWORK_INIT_COMMANDS[framework];
+            //   if (commands) {
+            //     try {
+            //       await instance.fs.readdir("/home/workspace/coding-challenge");
+            //       // Directory exists, just cd into it and skip initialization
+            //       console.log(
+            //         "coding-challenge directory already exists, skipping initialization",
+            //       );
+            //       const writer = shellProcess.input.getWriter();
+            //       writer.write("cd coding-challenge\n");
+            //       writer.releaseLock();
+            //     } catch (error) {
+            //       // Directory doesn't exist, run initialization commands
+            //       console.log(
+            //         "coding-challenge directory not found, running initialization commands",
+            //       );
+            //       const writer = shellProcess.input.getWriter();
+            //       for (const command of commands) {
+            //         writer.write(`${command}\n`);
+            //       }
+            //       writer.releaseLock();
+            //     }
+            //   }
+            // }
 
             // Set the global instance
             globalWebContainerInstance = {
