@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { relations } from "drizzle-orm";
 import { jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
 
@@ -39,3 +40,23 @@ export const assessmentSubmission = pgTable("assessment_submission", {
     .$onUpdate(() => new Date())
     .notNull(),
 });
+
+// Define relations
+export const assessmentSubmissionRelations = relations(assessmentSubmission, ({ one }) => ({
+  session: one(assessmentSession, {
+    fields: [assessmentSubmission.sessionId],
+    references: [assessmentSession.id],
+  }),
+  user: one(user, {
+    fields: [assessmentSubmission.userId],
+    references: [user.id],
+  }),
+}));
+
+export const assessmentSessionRelations = relations(assessmentSession, ({ one, many }) => ({
+  user: one(user, {
+    fields: [assessmentSession.userId],
+    references: [user.id],
+  }),
+  submissions: many(assessmentSubmission),
+}));

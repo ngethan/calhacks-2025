@@ -17,6 +17,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { sessionId, rubric } = body;
 
+    console.log("[Rubric Save API] Received request to save rubric");
+    console.log("[Rubric Save API] Session ID:", sessionId);
+    console.log("[Rubric Save API] Rubric keys:", Object.keys(rubric || {}));
+
     if (!sessionId || !rubric) {
       return NextResponse.json(
         { error: "Session ID and rubric are required" },
@@ -24,28 +28,32 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify the session belongs to the user and is active
-    const activeSession = await db.query.assessmentSession.findFirst({
+    // Verify the session belongs to the user (don't check status - it might be completed by now)
+    const session_data = await db.query.assessmentSession.findFirst({
       where: and(
         eq(assessmentSession.id, sessionId),
         eq(assessmentSession.userId, session.user.id),
-        eq(assessmentSession.status, "active"),
       ),
     });
 
-    if (!activeSession) {
+    if (!session_data) {
       return NextResponse.json(
-        { error: "Active assessment session not found" },
+        { error: "Assessment session not found" },
         { status: 404 },
       );
     }
 
     // Update rubric
+    console.log("[Rubric Save API] Updating session with rubric...");
     const updated = await db
       .update(assessmentSession)
       .set({ rubric })
       .where(eq(assessmentSession.id, sessionId))
       .returning();
+
+    console.log("[Rubric Save API] ✅ Rubric saved successfully to database");
+    console.log("[Rubric Save API] Updated session:", updated[0]?.id);
+    console.log("[Rubric Save API] Rubric has keys:", Object.keys(updated[0]?.rubric || {}));
 
     return NextResponse.json({ session: updated[0] });
   } catch (error) {
@@ -85,6 +93,11 @@ export async function GET(request: Request) {
           { status: 404 },
         );
       }
+
+      console.log("[Rubric GET API] Returning active session data");
+      console.log("[Rubric GET API] Session ID:", activeSession.id);
+      console.log("[Rubric GET API] Problem content length:", activeSession.problemContent?.length || 0);
+      console.log("[Rubric GET API] Problem content preview:", activeSession.problemContent?.substring(0, 100) || "EMPTY");
 
       return NextResponse.json({
         sessionId: activeSession.id,

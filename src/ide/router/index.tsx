@@ -1,4 +1,4 @@
-import { FilesIcon, SearchIcon, SettingsIcon } from "lucide-react";
+import { FilesIcon, SearchIcon, SettingsIcon, FileTextIcon } from "lucide-react";
 import { create } from "zustand";
 
 export type Page = {
@@ -6,11 +6,15 @@ export type Page = {
   icon: React.ElementType;
   bottom?: boolean;
 };
-export type AllPages = "files" | "search" | "settings";
+export type AllPages = "files" | "challenge" | "search" | "settings";
 export const pages: { [key in AllPages]: Page } = {
   files: {
     name: "Files",
     icon: FilesIcon,
+  },
+  challenge: {
+    name: "Challenge",
+    icon: FileTextIcon,
   },
   search: {
     name: "Search",
@@ -29,6 +33,6 @@ type IDERouterState = {
 };
 
 export const useIDERouter = create<IDERouterState>()((set) => ({
-  page: "files",
+  page: "challenge", // Default to challenge page so users see the problem immediately
   setPage: (page) => set({ page }),
 }));

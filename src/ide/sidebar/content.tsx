@@ -1,4 +1,5 @@
 import { FilesPage } from "@/ide/pages/files";
+import { ChallengePage } from "@/ide/pages/challenge";
 import { SearchPage } from "@/ide/pages/search";
 import { SettingsPage } from "@/ide/pages/settings";
 import { useIDERouter } from "@/ide/router";
@@ -8,6 +9,7 @@ export const IDESidebarContent = () => {
   return (
     <div className="h-full bg-sidebar">
       {page === "files" && <FilesPage />}
+      {page === "challenge" && <ChallengePage />}
       {page === "search" && <SearchPage />}
       {page === "settings" && <SettingsPage />}
     </div>
