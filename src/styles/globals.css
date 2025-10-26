@@ -125,6 +125,50 @@
   }
 }
 
+/* Custom Scrollbar Styles */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Dark theme scrollbar overrides */
+.dark * {
+  scrollbar-color: #3e4452 transparent;
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background: #3e4452;
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: #9da5b4;
+}
+
 /* Diff Viewer Custom Styles */
 .diff-view {
   font-size: 12px;
