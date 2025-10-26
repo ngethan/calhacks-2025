@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/resizable";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import XTermConsole from "@/components/xterm-console";
+import { useAssessment } from "@/hooks/use-assessment";
 import { Chat } from "@/ide/chat";
 import { IDEEditor, useEditorState } from "@/ide/editor";
 import { IFrame } from "@/ide/iframe";
@@ -38,6 +39,7 @@ const AppContent = () => {
   const container = useWebContainer();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const assessment = useAssessment();
 
   // Check for GitHub OAuth callback
   useEffect(() => {
@@ -185,7 +187,13 @@ const AppContent = () => {
           />
           <p className="font-mono">vibecheck</p>
         </div>
-        <p>Recipe App (10:23 left)</p>
+        <p
+          className={
+            assessment.isExpired ? "text-destructive font-semibold" : ""
+          }
+        >
+          {assessment.timeRemaining} left
+        </p>
         <div className="flex items-center gap-1">
           {/* Mobile menu - shows on screens smaller than lg */}
           <div className="flex gap-1 lg:hidden">

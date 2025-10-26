@@ -30,13 +30,13 @@ class ZenFileSystemHandler {
     this.editorWriteTimestamps = new Map();
   }
 
-  async init() {
+  async init(sessionId: string, userId: string) {
     await configure({
       mounts: {
-        "/": IndexedDB,
+        "/": await IndexedDB.create({ storeName: `zenfs-${sessionId}-${userId}` }),
       },
     });
-    zenFs.writeFileSync("/test.txt", "Hello World");
+    // zenFs.writeFileSync("/test.txt", "Hello World");
 
     const setFiles = useFileSystem.getState().setFiles;
     const { editorFiles } = await this.buildFileTree();

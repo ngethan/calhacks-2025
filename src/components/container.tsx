@@ -1,5 +1,6 @@
 "use client";
 
+import { useAssessmentContext } from "@/contexts/assessment-context";
 import { fileSystem } from "@/ide/filesystem/zen-fs";
 import type {
   ErrorListener,
@@ -13,6 +14,16 @@ import type React from "react";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 type WebContainerStatus = "booting" | "ready" | "error";
+
+// Framework initialization scripts
+const FRAMEWORK_INIT_COMMANDS: Record<string, string[]> = {
+  "react-router-v7": [
+    "npx -y create-react-router@latest coding-challenge -y && cd coding-challenge",
+  ],
+  nextjs: [
+    "pnpm create next-app@15.5.6 coding-challenge --yes && cd coding-challenge && pnpm run dev",
+  ],
+};
 
 // Add this new type mapping
 type WebContainerEventMap = {
@@ -63,7 +74,10 @@ let globalWebContainerInstance: {
 
 export const WebContainerProvider = ({
   children,
-}: { children: React.ReactNode }) => {
+}: {
+  children: React.ReactNode;
+}) => {
+  const { userId, framework, sessionId } = useAssessmentContext();
   const [webContainer, setWebContainer] = useState<WebContainer | null>(null);
   const listeners = useRef<Listeners>({
     port: [],
@@ -80,7 +94,7 @@ export const WebContainerProvider = ({
   useEffect(() => {
     if (status.current === "booting") {
       status.current = "ready";
-      fileSystem.init().then(() => {
+      fileSystem.init(sessionId || "default", userId || "default").then(() => {
         WebContainer.boot({ workdirName: "workspace" }).then(
           async (instance) => {
             await fileSystem.mountWebContainer(instance);
@@ -126,6 +140,13 @@ export const WebContainerProvider = ({
                 },
               }),
             );
+            if (framework) {
+              FRAMEWORK_INIT_COMMANDS[framework]?.forEach((command) => {
+                const writer = shellProcess.input.getWriter();
+                writer.write(command + "\n");
+                writer.releaseLock();
+              });
+            }
 
             // Set the global instance
             globalWebContainerInstance = {
@@ -134,7 +155,7 @@ export const WebContainerProvider = ({
               addListener,
               removeListener,
             };
-          },
+          }
         );
       });
     }
