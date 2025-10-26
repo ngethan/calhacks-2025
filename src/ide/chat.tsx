@@ -2,7 +2,6 @@
 
 import { FileIcon } from "@/components/file-icon";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { getCurrentFileContext } from "@/ide/ai/context";
 import { type FileEdit, applyDiff, parseFileEdits } from "@/ide/ai/diff-utils";
@@ -544,7 +543,7 @@ export const Chat = ({ onClose }: ChatProps) => {
   return (
     <div className="flex h-full max-h-screen flex-col overflow-y-scroll bg-card">
       {/* Header */}
-      <div className="flex items-center gap-2 border-border/50 border-b px-3 py-2.5">
+      <div className="relative flex items-center gap-2 border-border/50 border-b px-3 py-2.5">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <Button
             size="sm"
@@ -581,12 +580,10 @@ export const Chat = ({ onClose }: ChatProps) => {
             <X className="h-4 w-4" />
           </Button>
         )}
-      </div>
 
-      {/* Sessions Sidebar */}
-      {showSessions && (
-        <div className="border-border/50 border-b bg-muted/30">
-          <ScrollArea className="max-h-[200px]">
+        {/* Sessions Sidebar Dropdown */}
+        {showSessions && (
+          <div className="absolute left-3 right-3 top-full z-50 mt-1 max-h-[300px] overflow-y-auto rounded-md border border-border bg-card shadow-lg">
             <div className="space-y-1 p-2">
               {sessions.map((session) => (
                 <div
@@ -660,9 +657,9 @@ export const Chat = ({ onClose }: ChatProps) => {
                 </div>
               ))}
             </div>
-          </ScrollArea>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto">
