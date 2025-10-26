@@ -388,86 +388,89 @@ export const FilesPage = () => {
   };
 
   return (
-    <div className="group h-full overflow-auto bg-sidebar p-2 font-mono text-sm">
-      <div className="group/header mb-2 flex items-center justify-between">
-        <h2 className="font-sans font-semibold text-muted-foreground text-xs uppercase">
-          Explorer
-        </h2>
-        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover/header:opacity-100">
-          <button
-            type="button"
-            className="rounded p-1 transition-colors hover:bg-[#2A2D2E]"
-            title="New File"
-            onClick={handleCreateFile}
-          >
-            <FilePlus size={16} className="text-muted-foreground" />
-          </button>
-          <button
-            type="button"
-            className="rounded p-1 transition-colors hover:bg-[#2A2D2E]"
-            title="New Folder"
-            onClick={handleCreateFolder}
-          >
-            <FolderPlus size={16} className="text-muted-foreground" />
-          </button>
-          <button
-            type="button"
-            className="rounded p-1 transition-colors hover:bg-[#2A2D2E]"
-            title="Collapse All"
-            onClick={collapseAll}
-          >
-            <ListCollapse size={16} className="text-muted-foreground" />
-          </button>
-        </div>
-      </div>
-
-      {creatingType && (
-        <div className="mb-2 space-y-1">
-          {creatingPath !== "/" && (
-            <div className="px-2 text-muted-foreground text-xs">
-              Creating in: <span className="font-mono">{creatingPath}</span>
-            </div>
-          )}
-          <div className="flex items-center gap-1 rounded bg-[#2A2D2E] px-2 py-1">
-            <FileIcon
-              node={
-                creatingType === "folder"
-                  ? { directory: {}, open: false }
-                  : { file: { size: 0, isBinary: false } }
-              }
-              name={newItemName || "untitled"}
-            />
-            <input
-              ref={inputRef}
-              type="text"
-              value={newItemName}
-              onChange={(e) => setNewItemName(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={
-                creatingType === "file" ? "filename.ext" : "foldername"
-              }
-              className="flex-1 border-none bg-transparent px-1 text-xs outline-none"
-            />
+    <div className="group h-full flex flex-col overflow-hidden bg-sidebar font-mono text-sm">
+      <div className="p-2 space-y-2 shrink-0">
+        <div className="group/header flex items-center justify-between">
+          <h2 className="font-sans font-semibold text-muted-foreground text-xs uppercase">
+            Explorer
+          </h2>
+          <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover/header:opacity-100">
             <button
-              className="rounded p-0.5 transition-colors hover:bg-[#3A3D3E]"
-              onClick={handleConfirmCreate}
-              title="Confirm"
+              type="button"
+              className="rounded p-1 transition-colors hover:bg-[#2A2D2E]"
+              title="New File"
+              onClick={handleCreateFile}
             >
-              <Check size={14} className="text-green-500" />
+              <FilePlus size={16} className="text-muted-foreground" />
             </button>
             <button
-              className="rounded p-0.5 transition-colors hover:bg-[#3A3D3E]"
-              onClick={handleCancelCreate}
-              title="Cancel"
+              type="button"
+              className="rounded p-1 transition-colors hover:bg-[#2A2D2E]"
+              title="New Folder"
+              onClick={handleCreateFolder}
             >
-              <X size={14} className="text-red-500" />
+              <FolderPlus size={16} className="text-muted-foreground" />
+            </button>
+            <button
+              type="button"
+              className="rounded p-1 transition-colors hover:bg-[#2A2D2E]"
+              title="Collapse All"
+              onClick={collapseAll}
+            >
+              <ListCollapse size={16} className="text-muted-foreground" />
             </button>
           </div>
         </div>
-      )}
 
-      <ScrollArea className="h-[93vh]">
-        <div className="min-w-0">
+        {creatingType && (
+          <div className="space-y-1">
+            {creatingPath !== '/' && (
+              <div className="text-xs text-muted-foreground px-2">
+                Creating in: <span className="font-mono">{creatingPath}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2 px-2 py-1 bg-[#2A2D2E] rounded">
+              <FileIcon 
+                node={creatingType === 'folder' ? { directory: {}, open: false } : { file: { size: 0, isBinary: false } }} 
+                name={newItemName || 'untitled'} 
+              />
+              <input
+                ref={inputRef}
+                type="text"
+                value={newItemName}
+                onChange={(e) => setNewItemName(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onBlur={handleCancelCreate}
+                placeholder={creatingType === 'file' ? 'filename.ext' : 'foldername'}
+                className="flex-1 bg-transparent border-none outline-none text-xs px-1 min-w-0"
+              />
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  className="p-1 hover:bg-[#3A3D3E] rounded transition-colors flex items-center justify-center"
+                  onClick={handleConfirmCreate}
+                  onMouseDown={(e) => e.preventDefault()}
+                  title="Confirm (Enter)"
+                >
+                  <Check size={16} className="text-green-500" />
+                </button>
+                <button
+                  type="button"
+                  className="p-1 hover:bg-[#3A3D3E] rounded transition-colors flex items-center justify-center"
+                  onClick={handleCancelCreate}
+                  onMouseDown={(e) => e.preventDefault()}
+                  title="Cancel (Escape)"
+                >
+                  <X size={16} className="text-red-500" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <ScrollArea className="flex-1 overflow-hidden">
+        <div className="min-w-0 p-2 pt-0">
           {sorted.map(([name, node]) => (
             <FileTreeNode
               key={name}

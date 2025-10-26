@@ -23,6 +23,9 @@ type EditorState = {
   addTabToWindow: (window: number, path: string) => void;
   addTabToActiveWindow: (path: string) => void;
   setActiveTab: (window: number, tab: number) => void;
+  closeOtherTabs: (window: number, keepIndex: number) => void;
+  closeAllTabs: (window: number) => void;
+  closeTabsToRight: (window: number, fromIndex: number) => void;
 };
 
 export const useEditorState = create<EditorState>()(
@@ -117,7 +120,37 @@ export const useEditorState = create<EditorState>()(
         }
       });
     },
-  })),
+    closeOtherTabs: (window: number, keepIndex: number) => {
+      set((state) => {
+        const w = state.windows[window];
+        if (w && w.tabs[keepIndex]) {
+          const keepTab = w.tabs[keepIndex];
+          w.tabs = [keepTab];
+          w.activeTab = 0;
+        }
+      });
+    },
+    closeAllTabs: (window: number) => {
+      set((state) => {
+        const w = state.windows[window];
+        if (w) {
+          w.tabs = [];
+          w.activeTab = 0;
+        }
+      });
+    },
+    closeTabsToRight: (window: number, fromIndex: number) => {
+      set((state) => {
+        const w = state.windows[window];
+        if (w) {
+          w.tabs = w.tabs.slice(0, fromIndex + 1);
+          if (w.activeTab > fromIndex) {
+            w.activeTab = fromIndex;
+          }
+        }
+      });
+    },
+  }))
   // {
   //   name: "runway-editor-state",
   //   storage: createJSONStorage(() => localStorage),
@@ -193,6 +226,7 @@ export const IDEEditor = () => {
                           index={j}
                           windowIndex={i}
                           showFullPath={hasDuplicate}
+                          totalTabs={w.tabs.length}
                         />
                       );
                     })}
