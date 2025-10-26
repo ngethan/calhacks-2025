@@ -459,6 +459,10 @@ class ZenFileSystemHandler {
       }
     }
   }
+  public listFiles(path: string) {
+    const files = zenFs.readdirSync(path);
+    return files;
+  }
 }
 export const fileSystem = new ZenFileSystemHandler();
 

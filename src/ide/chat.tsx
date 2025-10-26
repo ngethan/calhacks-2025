@@ -8,6 +8,7 @@ import { type FileEdit, applyDiff, parseFileEdits } from "@/ide/ai/diff-utils";
 import { DiffViewer } from "@/ide/ai/diff-viewer";
 import type { FileContext } from "@/ide/chat/context-utils";
 import { FilePicker } from "@/ide/chat/file-picker";
+import { CommandOutputCard } from "@/ide/chat/command-output-card";
 import { useEditorState } from "@/ide/editor";
 import { fileSystem } from "@/ide/filesystem/zen-fs";
 import { type Message, useChatStore } from "@/ide/stores/chat-store";
@@ -25,6 +26,9 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
+import { getWebContainer } from "@/components/container";
 
 const WORKSPACE_ROOT = "/home/workspace";
 
@@ -58,11 +62,13 @@ const normalizeEditPath = (rawPath: string) => {
 
 function MessageContent({
   content,
+  parts,
   onAccept,
   onReject,
   isUser = false,
 }: {
   content: string;
+  parts?: any[];
   onAccept?: (edit: FileEdit) => void;
   onReject?: (edit: FileEdit) => void;
   isUser?: boolean;
@@ -84,7 +90,176 @@ function MessageContent({
     return <p className="whitespace-pre-wrap">{content}</p>;
   }
 
-  // For assistant messages, parse file edits
+  // For assistant messages with parts (from useChat), render parts including tool calls
+  if (parts && parts.length > 0) {
+    return (
+      <div className="space-y-3">
+        {parts.map((part, idx) => {
+          // Text parts
+          if (part.type === "text") {
+            return (
+              <div
+                key={idx}
+                className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-p:text-sm prose-p:leading-snug prose-headings:tracking-tight [&_li]:my-0.5 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6"
+              >
+                <Streamdown
+                  parseIncompleteMarkdown={false}
+                  shikiTheme={["github-dark", "github-dark"]}
+                >
+                  {part.text}
+                </Streamdown>
+              </div>
+            );
+          }
+
+          // Handle all tool call parts generically
+          if (part.type?.startsWith("tool-")) {
+            const toolName = part.type.replace("tool-", "");
+            
+            // Input streaming state
+            if (part.state === "input-streaming") {
+              return (
+                <div key={idx} className="rounded-md border border-border/50 bg-muted/30 p-3">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                    <span className="font-medium text-foreground text-xs">
+                      Calling {toolName}...
+                    </span>
+                  </div>
+                </div>
+              );
+            }
+
+            // Input available state
+            if (part.state === "input-available") {
+              return (
+                <div key={idx} className="rounded-md border border-border/50 bg-muted/30 p-3">
+                  <div className="mb-2 flex items-center gap-2">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                    <span className="font-medium text-foreground text-xs">
+                      {toolName}
+                    </span>
+                  </div>
+                  {part.input && (
+                    <div className="mt-2 rounded-md bg-muted/50 p-2 font-mono text-[10px]">
+                      <pre className="overflow-x-auto whitespace-pre-wrap">
+                        {JSON.stringify(part.input, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // Output available state - special handling for editFileWithPatch
+            if (part.state === "output-available") {
+              if (toolName === "editFileWithPatch") {
+                const input = part.input as { path: string; diff: string; explanation: string } | undefined;
+                
+                if (!input?.path || !input?.diff) {
+                  console.error("[Chat] Tool call missing required fields:", input);
+                  return null;
+                }
+
+                const edit: FileEdit = {
+                  path: input.path,
+                  diff: input.diff,
+                };
+                
+                return (
+                  <DiffViewer
+                    key={idx}
+                    edit={edit}
+                    onAccept={() => onAccept?.(edit)}
+                    onReject={() => onReject?.(edit)}
+                  />
+                );
+              }
+
+              // Special handling for runCommand
+              if (toolName === "runCommand") {
+                const input = part.input as { command: string; cwd?: string; outputLimit?: number } | undefined;
+                const output = part.output as string | undefined;
+                
+                if (!input?.command) {
+                  console.error("[Chat] runCommand missing command:", input);
+                  return null;
+                }
+
+                return (
+                  <CommandOutputCard
+                    key={idx}
+                    command={input.command}
+                    output={output || ""}
+                    cwd={input.cwd}
+                  />
+                );
+              }
+
+              // Generic tool output display
+              return (
+                <div key={idx} className="rounded-md border border-green-500/30 bg-green-500/5 p-3">
+                  <div className="mb-2 flex items-center gap-2">
+                    <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                    <span className="font-medium text-foreground text-xs">
+                      {toolName}
+                    </span>
+                  </div>
+                  
+                  {/* Show input */}
+                  {part.input && Object.keys(part.input).length > 0 && (
+                    <div className="mb-2">
+                      <div className="mb-1 text-[10px] text-muted-foreground uppercase">Input:</div>
+                      <div className="rounded-md bg-muted/50 p-2 font-mono text-[10px]">
+                        <pre className="overflow-x-auto whitespace-pre-wrap">
+                          {JSON.stringify(part.input, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Show output */}
+                  {part.output !== undefined && (
+                    <div>
+                      <div className="mb-1 text-[10px] text-muted-foreground uppercase">Output:</div>
+                      <div className="rounded-md bg-muted/50 p-2 font-mono text-[10px]">
+                        <pre className="overflow-x-auto whitespace-pre-wrap">
+                          {typeof part.output === "string" 
+                            ? part.output 
+                            : JSON.stringify(part.output, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // Error state
+            if (part.state === "output-error") {
+              return (
+                <div key={idx} className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                  <div className="mb-2 flex items-center gap-2">
+                    <X className="h-3.5 w-3.5 text-destructive" />
+                    <span className="font-medium text-foreground text-xs">
+                      {toolName} failed
+                    </span>
+                  </div>
+                  <p className="text-destructive/90 text-xs">
+                    {part.errorText || "Unknown error"}
+                  </p>
+                </div>
+              );
+            }
+          }
+
+          return null;
+        })}
+      </div>
+    );
+  }
+
+  // Fallback for legacy format - parse file edits from content
   const edits = parseFileEdits(content);
   const hasEdits = edits.length > 0;
 
@@ -136,13 +311,10 @@ type ChatProps = {
 };
 
 export const Chat = ({ onClose }: ChatProps) => {
-  const [input, setInput] = useState("");
-  const [isStreaming, setIsStreaming] = useState(false);
   const [showSessions, setShowSessions] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [showFilePicker, setShowFilePicker] = useState(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previousFilePathRef = useRef<string | null>(null);
@@ -155,23 +327,10 @@ export const Chat = ({ onClose }: ChatProps) => {
     deleteSession,
     setActiveSession,
     renameSession,
-    addMessage,
-    updateLastMessage,
     addAttachedFile,
     removeAttachedFile,
     setAttachedFiles,
   } = useChatStore();
-
-  // Create initial session if none exists
-  useEffect(() => {
-    if (sessions.length === 0) {
-      createSession("New Chat");
-    }
-  }, [sessions.length, createSession]);
-
-  const activeSession = sessions.find((s) => s.id === activeSessionId);
-  const messages = activeSession?.messages || [];
-  const attachedFiles = activeSession?.attachedFiles || [];
 
   const getCurrentFile = () => {
     return getCurrentFileContext(
@@ -183,6 +342,145 @@ export const Chat = ({ onClose }: ChatProps) => {
       }
     );
   };
+
+  // Use the AI SDK's useChat hook
+  const {
+    messages: aiMessages,
+    sendMessage,
+    status,
+    stop,
+    addToolResult,
+  } = useChat({
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    onToolCall: async ({ toolCall }) => {
+      console.log("[!] -> toolCall", toolCall);
+      const container = getWebContainer();
+        if (!container?.webContainer || container.status !== "ready") {
+          addToolResult({
+            toolCallId: toolCall.toolCallId,
+            state: "output-error",
+            tool: toolCall.toolName,
+            errorText: "WebContainer not ready. Prompt the user to wait for the WebContainer to be ready, then try again.",
+          })
+          return;
+        }
+      if (toolCall.toolName === "listFiles") {
+        const input = toolCall.input as { path: string };
+        const files = await container.webContainer?.fs.readdir(input.path);
+        addToolResult({
+          toolCallId: toolCall.toolCallId,
+          state: "output-available",
+          tool: toolCall.toolName,
+          output: JSON.stringify(files),
+        });
+      } else if (toolCall.toolName === "readFile") {
+        const input = toolCall.input as { path: string };
+        const file = await container.webContainer?.fs.readFile(input.path);
+        addToolResult({
+          toolCallId: toolCall.toolCallId,
+          state: "output-available",
+          tool: toolCall.toolName,
+          output: file,
+        });
+      } else if (toolCall.toolName === "createFile") {
+        const input = toolCall.input as { path: string; content: string };
+        await container.webContainer?.fs.writeFile(input.path, input.content);
+        addToolResult({
+          toolCallId: toolCall.toolCallId,
+          state: "output-available",
+          tool: toolCall.toolName,
+          output: "File created",
+        });
+      } else if (toolCall.toolName === "createFolder") {
+        const input = toolCall.input as { path: string };
+        await container.webContainer?.fs.mkdir(input.path, { recursive: false });
+        addToolResult({
+          toolCallId: toolCall.toolCallId,
+          state: "output-available",
+          tool: toolCall.toolName,
+          output: "Folder created",
+        });
+      } else if (toolCall.toolName === "runCommand") {
+        try {
+          const input = toolCall.input as { command: string; cwd?: string; outputLimit?: number };
+          const cwd = input.cwd ?? "/";
+          // Split command into command name and args
+          const commandParts = input.command.trim().split(/\s+/).filter(Boolean);
+          if (commandParts.length === 0) {
+            addToolResult({
+              toolCallId: toolCall.toolCallId,
+              state: "output-error",
+              tool: toolCall.toolName,
+              errorText: "No command provided",
+            });
+            return;
+          }
+          
+          const commandName = commandParts[0]!;
+          const commandArgs = commandParts.slice(1);
+          
+          console.log("Running command:", commandName, "with args:", commandArgs, "in directory:", cwd);
+          
+          const result = await container.webContainer?.spawn(commandName, commandArgs, {
+            cwd,
+          });
+          
+          let output = "";
+          result.output.pipeTo(new WritableStream({ 
+            write(data) { 
+              output += data; 
+            }
+          }));
+          await result.exit; // wait for the command to exit
+
+          const slicedOutput = input.outputLimit ? output.slice(0, input.outputLimit) : output;
+          addToolResult({
+            toolCallId: toolCall.toolCallId,
+            state: "output-available",
+            tool: toolCall.toolName,
+            output: slicedOutput,
+          });
+        } catch (error) {
+          addToolResult({
+            toolCallId: toolCall.toolCallId,
+            state: "output-error",
+            tool: toolCall.toolName,
+            errorText: error instanceof Error ? error.message : "Unknown error",
+          });
+          console.error("[Chat] Failed to run command:", error);
+        }
+      }
+    },
+    transport: new DefaultChatTransport({
+      api: "/api/ai/chat",
+      body: {
+        currentFile: getCurrentFile(),
+      },
+    }),
+  });
+  
+  // Local state for input
+  const [input, setInput] = useState("");
+  const isLoading = status === "submitted" || status === "streaming";
+
+  // Create initial session if none exists
+  useEffect(() => {
+    if (sessions.length === 0) {
+      createSession("New Chat");
+    }
+  }, [sessions.length, createSession]);
+
+  const activeSession = sessions.find((s) => s.id === activeSessionId);
+  const attachedFiles = activeSession?.attachedFiles || [];
+  
+  // Convert AI SDK messages to our local Message format for display
+  const messages: Message[] = aiMessages.map((msg) => ({
+    role: msg.role as "user" | "assistant",
+    content: msg.parts
+      .filter((part) => part.type === "text")
+      .map((part) => (part.type === "text" ? part.text : ""))
+      .join(""),
+  }));
 
   // Memoize current file path to use as dependency
   const currentFilePath = useMemo(() => {
@@ -335,19 +633,11 @@ export const Chat = ({ onClose }: ChatProps) => {
   };
 
   const handleStop = () => {
-    if (abortControllerRef.current) {
-      try {
-        abortControllerRef.current.abort("User stopped the request");
-      } catch (error) {
-        // Ignore abort errors
-      }
-      abortControllerRef.current = null;
-      setIsStreaming(false);
-    }
+    stop();
   };
 
   const handleSend = async () => {
-    if (!input.trim() || isStreaming || !activeSessionId) return;
+    if (!input.trim() || isLoading || !activeSessionId) return;
 
     // Build user message with attached files
     let messageContent = input;
@@ -369,181 +659,29 @@ export const Chat = ({ onClose }: ChatProps) => {
       }
     }
 
-    const userMessage: Message = { role: "user", content: messageContent };
     const isFirstMessage = messages.length === 0;
 
-    // Create abort controller for this request
-    abortControllerRef.current = new AbortController();
-
-    // Add user message to store
-    addMessage(activeSessionId, userMessage);
-
-    // Ensure all messages have simple string content for API compatibility
-    // Filter out any malformed messages and convert to plain objects
-    const sanitizedMessages = messages
-      .filter((msg) => {
-        if (!msg || !msg.role || msg.content === undefined) return false;
-        // Filter out empty assistant messages (from failed streams)
-        if (
-          msg.role === "assistant" &&
-          (!msg.content || msg.content.trim() === "")
-        ) {
-          console.log("[Chat] Filtering out empty assistant message");
-          return false;
-        }
-        return true;
-      })
-      .map((msg, idx) => {
-        let content = msg.content;
-
-        // Handle various content types
-        if (Array.isArray(content)) {
-          console.warn(
-            `[Chat] Message ${idx} has array content, converting to string`
-          );
-          content = content
-            .map((c) => (typeof c === "string" ? c : JSON.stringify(c)))
-            .join("\n");
-        } else if (typeof content === "object" && content !== null) {
-          console.warn(
-            `[Chat] Message ${idx} has object content, converting to string`
-          );
-          content = JSON.stringify(content);
-        } else if (typeof content !== "string") {
-          console.warn(
-            `[Chat] Message ${idx} has ${typeof content} content, converting to string`
-          );
-          content = String(content);
-        }
-
-        return {
-          role: msg.role as "user" | "assistant" | "system",
-          content: content,
-        };
-      });
-
-    const currentMessages = [...sanitizedMessages, userMessage];
-
-    console.log(
-      "[Chat] Sending message. Message count:",
-      currentMessages.length
-    );
-    console.log(
-      "[Chat] Final messages being sent:",
-      currentMessages.map((m) => ({
-        role: m.role,
-        contentType: typeof m.content,
-        contentLength: m.content.length,
-        contentPreview: m.content.substring(0, 100),
-      }))
-    );
-
+    // Clear attached files and input
+    setAttachedFiles(activeSessionId, []);
     setInput("");
-    setIsStreaming(true);
 
-    const currentFile = getCurrentFile();
-    let assistantMessage = "";
+    // Send the message using AI SDK's sendMessage
+    sendMessage({ text: messageContent });
 
-    // Add empty assistant message to store
-    addMessage(activeSessionId, { role: "assistant", content: "" });
-
-    try {
-      const response = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messages: currentMessages,
-          currentFile,
-        }),
-        signal: abortControllerRef.current?.signal,
-      });
-
-      console.log("[Chat] Response status:", response.status);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (!reader) {
-        throw new Error("No reader available");
-      }
-
-      console.log("[Chat] Starting to read stream...");
-      let chunkCount = 0;
-      let buffer = ""; // Buffer to handle partial XML tags
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-
-          if (done) {
-            console.log("[Chat] Stream complete. Total chunks:", chunkCount);
-            break;
+    // Generate title after first message (wait for response)
+    if (isFirstMessage) {
+      setTimeout(() => {
+        const lastMessage = aiMessages[aiMessages.length - 1];
+        if (lastMessage && lastMessage.role === "assistant") {
+          const responseText = lastMessage.parts
+            .filter((part) => part.type === "text")
+            .map((part) => (part.type === "text" ? part.text : ""))
+            .join("");
+          if (responseText) {
+            generateChatTitle(messageContent, responseText);
           }
-
-          const chunk = decoder.decode(value);
-          chunkCount++;
-          buffer += chunk;
-          assistantMessage += chunk;
-
-          console.log(`[Chat] Chunk ${chunkCount}:`, chunk.substring(0, 50));
-
-          // Update the last message in store
-          updateLastMessage(activeSessionId, assistantMessage);
         }
-      } catch (readError) {
-        // If the stream was aborted, this is expected - silently handle it
-        if (
-          readError instanceof Error &&
-          (readError.name === "AbortError" ||
-            readError.message?.includes("abort"))
-        ) {
-          console.log("[Chat] Stream reading stopped by user");
-          throw readError; // Re-throw to be caught by outer catch
-        }
-        throw readError;
-      }
-
-      console.log("[Chat] Final message length:", assistantMessage.length);
-
-      // Generate title after first message
-      if (isFirstMessage && assistantMessage) {
-        generateChatTitle(input, assistantMessage);
-      }
-    } catch (error: unknown) {
-      // Check if it was aborted by user
-      if (
-        error instanceof Error &&
-        (error.name === "AbortError" || error.message.includes("abort"))
-      ) {
-        console.log("[Chat] Request stopped by user");
-        // Don't update with error message if user stopped it
-      } else {
-        console.error("[Chat] Error:", error);
-        // Log error details safely
-        try {
-          console.error(
-            "[Chat] Error message:",
-            error instanceof Error ? error.message : String(error)
-          );
-        } catch (e) {
-          console.error("[Chat] Could not log error details");
-        }
-        // Update last message with error
-        updateLastMessage(
-          activeSessionId,
-          "Sorry, an error occurred. Please try again."
-        );
-      }
-    } finally {
-      console.log("[Chat] Finished. Setting isStreaming to false");
-      abortControllerRef.current = null;
-      setIsStreaming(false);
+      }, 2000);
     }
   };
 
@@ -551,7 +689,7 @@ export const Chat = ({ onClose }: ChatProps) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       // Only send if not currently streaming
-      if (!isStreaming) {
+      if (!isLoading) {
         void handleSend();
       }
     }
@@ -586,10 +724,10 @@ export const Chat = ({ onClose }: ChatProps) => {
         <Button
           size="sm"
           variant="ghost"
-          className="h-6 w-6 p-0"
+          className="h-6 w-6 p-0 text-md"
           onClick={() => createSession()}
         >
-          @
+          +
         </Button>
         {onClose && (
           <Button
@@ -695,37 +833,46 @@ export const Chat = ({ onClose }: ChatProps) => {
               </p>
             </div>
           )}
-          {messages.map((msg, idx) => (
-            <div key={idx} className="space-y-1.5">
-              <div className="flex items-center gap-1.5">
+          {aiMessages.map((msg, idx) => {
+            // Convert message parts to display content
+            const textContent = msg.parts
+              .filter((part) => part.type === "text")
+              .map((part) => (part.type === "text" ? part.text : ""))
+              .join("");
+
+            return (
+              <div key={msg.id || idx} className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <div
+                    className={cn(
+                      "h-1 w-1 rounded-full",
+                      msg.role === "user" ? "bg-primary" : "bg-muted-foreground"
+                    )}
+                  />
+                  <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wide">
+                    {msg.role === "user" ? "You" : "Assistant"}
+                  </span>
+                </div>
                 <div
                   className={cn(
-                    "h-1 w-1 rounded-full",
-                    msg.role === "user" ? "bg-primary" : "bg-muted-foreground"
+                    "rounded-md text-xs leading-relaxed",
+                    msg.role === "user"
+                      ? "ml-2.5 bg-primary/10 px-3 py-2 text-foreground"
+                      : "ml-2.5 text-foreground/90"
                   )}
-                />
-                <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wide">
-                  {msg.role === "user" ? "You" : "Assistant"}
-                </span>
+                >
+                  <MessageContent
+                    content={textContent}
+                    parts={msg.parts}
+                    onAccept={handleAcceptEdit}
+                    onReject={handleRejectEdit}
+                    isUser={msg.role === "user"}
+                  />
+                </div>
               </div>
-              <div
-                className={cn(
-                  "rounded-md text-xs leading-relaxed",
-                  msg.role === "user"
-                    ? "ml-2.5 bg-primary/10 px-3 py-2 text-foreground"
-                    : "ml-2.5 text-foreground/90"
-                )}
-              >
-                <MessageContent
-                  content={msg.content}
-                  onAccept={handleAcceptEdit}
-                  onReject={handleRejectEdit}
-                  isUser={msg.role === "user"}
-                />
-              </div>
-            </div>
-          ))}
-          {isStreaming && (
+            );
+          })}
+          {isLoading && (
             <div className="ml-2.5 flex items-center gap-2 text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />
               <span className="text-xs">Thinking...</span>
@@ -818,7 +965,7 @@ export const Chat = ({ onClose }: ChatProps) => {
               </div>
 
               <div className="flex items-center gap-1">
-                {isStreaming ? (
+                {isLoading ? (
                   <Button
                     size="icon"
                     onClick={handleStop}

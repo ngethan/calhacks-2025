@@ -76,7 +76,7 @@ export const EditorTab = ({
             name={name}
             className="shrink-0"
           />
-          <span className="min-w-0 flex-1 truncate" title={path}>
+          <span className="min-w-0 flex-1 truncate text-sm" title={path}>
             {name}
           </span>
           <div

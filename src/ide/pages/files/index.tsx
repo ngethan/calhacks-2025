@@ -323,7 +323,7 @@ export const FilesPage = () => {
 
     try {
       const container = getWebContainer();
-      if (!container || container.status !== "ready") {
+      if (!container?.webContainer || container.status !== "ready") {
         toast.error("WebContainer not ready");
         return;
       }
