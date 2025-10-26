@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronRight, ChevronDown, FilePlus, FolderPlus, RefreshCw, MoreHorizontal, ListCollapse, X, Check } from 'lucide-react';
+import { ChevronRight, ChevronDown, FilePlus, FolderPlus, RefreshCw, MoreHorizontal, ListCollapse, X, Check, Trash } from 'lucide-react';
 import type { FSNode } from "@/ide/filesystem";
 import type { FSDirectory } from "@/ide/filesystem";
 import { useFileSystem } from "@/ide/filesystem";
@@ -10,11 +10,21 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getWebContainer } from '@/components/container';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 interface FileTreeNodeProps {
   name: string;
   level: number;
   fullPath: string;
   node: FSNode;
+  onCreateFile?: (path: string) => void;
+  onCreateFolder?: (path: string) => void;
+  onDelete?: (path: string, isDirectory: boolean) => void;
 }
 
 
@@ -28,7 +38,15 @@ const sortedEntries = (files: FSDirectory) => {
     return a[0].localeCompare(b[0]); // sort alphabetically
   });
 }
-export const FileTreeNode: React.FC<FileTreeNodeProps> = ({ name, node, level, fullPath }) => {
+export const FileTreeNode: React.FC<FileTreeNodeProps> = ({ 
+  name, 
+  node, 
+  level, 
+  fullPath,
+  onCreateFile,
+  onCreateFolder,
+  onDelete 
+}) => {
   const [isOpen, setIsOpen] = useState((node as FSDirectory).open || false);
   const { setFiles, files } = useFileSystem();
 
@@ -108,10 +126,36 @@ export const FileTreeNode: React.FC<FileTreeNodeProps> = ({ name, node, level, f
     }
     return <span className="w-4" />;
   };
+
+  const handleContextCreateFile = (e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if ('directory' in node) {
+      onCreateFile?.(fullPath);
+    }
+  };
+
+  const handleContextCreateFolder = (e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if ('directory' in node) {
+      onCreateFolder?.(fullPath);
+    }
+  };
+
+  const handleContextDelete = (e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDelete?.(fullPath, 'directory' in node);
+  };
+
   const sorted = "directory" in node ? sortedEntries(node) : [];
+  const isDirectory = 'directory' in node;
 
   return (
-    <div className="group/tree relative">
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div className="group/tree relative">
       {level > 0 && (
         <div className="absolute w-px bg-transparent group-hover/tree:bg-[#606060] transition-colors z-10"
           style={{ // this is the line
@@ -134,11 +178,41 @@ export const FileTreeNode: React.FC<FileTreeNodeProps> = ({ name, node, level, f
       {isOpen && 'directory' in node && (
         <div>
           {sorted.map(([childName, childNode]) => (
-            <FileTreeNode key={childName} name={childName} node={childNode} level={level + 1} fullPath={`${fullPath}/${childName}`} />
+            <FileTreeNode 
+              key={childName} 
+              name={childName} 
+              node={childNode} 
+              level={level + 1} 
+              fullPath={`${fullPath}/${childName}`}
+              onCreateFile={onCreateFile}
+              onCreateFolder={onCreateFolder}
+              onDelete={onDelete}
+            />
           ))}
         </div>
       )}
     </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        {isDirectory && (
+          <>
+            <ContextMenuItem onSelect={handleContextCreateFile}>
+              <FilePlus size={16} />
+              New File
+            </ContextMenuItem>
+            <ContextMenuItem onSelect={handleContextCreateFolder}>
+              <FolderPlus size={16} />
+              New Folder
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+          </>
+        )}
+        <ContextMenuItem variant="destructive" onSelect={handleContextDelete}>
+          <Trash size={16} />
+          Delete
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 };
 
@@ -146,6 +220,7 @@ export const FilesPage = () => {
   const { files, setFiles } = useFileSystem();
   const sorted = sortedEntries(files);
   const [creatingType, setCreatingType] = useState<'file' | 'folder' | null>(null);
+  const [creatingPath, setCreatingPath] = useState<string>('/');
   const [newItemName, setNewItemName] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -156,13 +231,48 @@ export const FilesPage = () => {
   }, [creatingType]);
 
   const handleCreateFile = () => {
+    setCreatingPath('/');
     setCreatingType('file');
     setNewItemName('');
   };
 
   const handleCreateFolder = () => {
+    setCreatingPath('/');
     setCreatingType('folder');
     setNewItemName('');
+  };
+
+  const handleContextCreateFile = (path: string) => {
+    setCreatingPath(path);
+    setCreatingType('file');
+    setNewItemName('');
+  };
+
+  const handleContextCreateFolder = (path: string) => {
+    setCreatingPath(path);
+    setCreatingType('folder');
+    setNewItemName('');
+  };
+
+  const handleDelete = async (path: string, isDirectory: boolean) => {
+    try {
+      const container = getWebContainer();
+      if (!container || container.status !== 'ready') {
+        toast.error('WebContainer not ready');
+        return;
+      }
+
+      if (isDirectory) {
+        await container.webContainer?.fs.rm(path, { recursive: true });
+        toast.success(`Folder deleted`);
+      } else {
+        await container.webContainer?.fs.rm(path);
+        toast.success(`File deleted`);
+      }
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      toast.error(`Failed to delete: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const handleConfirmCreate = async () => {
@@ -171,7 +281,7 @@ export const FilesPage = () => {
       return;
     }
 
-    const path = `/${newItemName}`;
+    const path = creatingPath === '/' ? `/${newItemName}` : `${creatingPath}/${newItemName}`;
     
     try {
       const container = getWebContainer();
@@ -195,11 +305,13 @@ export const FilesPage = () => {
     }
 
     setCreatingType(null);
+    setCreatingPath('/');
     setNewItemName('');
   };
 
   const handleCancelCreate = () => {
     setCreatingType(null);
+    setCreatingPath('/');
     setNewItemName('');
   };
 
@@ -263,41 +375,57 @@ export const FilesPage = () => {
       </div>
       
       {creatingType && (
-        <div className="mb-2 flex items-center gap-1 px-2 py-1 bg-[#2A2D2E] rounded">
-          <FileIcon 
-            node={creatingType === 'folder' ? { directory: {}, open: false } : { file: { size: 0, isBinary: false } }} 
-            name={newItemName || 'untitled'} 
-          />
-          <input
-            ref={inputRef}
-            type="text"
-            value={newItemName}
-            onChange={(e) => setNewItemName(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={creatingType === 'file' ? 'filename.ext' : 'foldername'}
-            className="flex-1 bg-transparent border-none outline-none text-xs px-1"
-          />
-          <button
-            className="p-0.5 hover:bg-[#3A3D3E] rounded transition-colors"
-            onClick={handleConfirmCreate}
-            title="Confirm"
-          >
-            <Check size={14} className="text-green-500" />
-          </button>
-          <button
-            className="p-0.5 hover:bg-[#3A3D3E] rounded transition-colors"
-            onClick={handleCancelCreate}
-            title="Cancel"
-          >
-            <X size={14} className="text-red-500" />
-          </button>
+        <div className="mb-2 space-y-1">
+          {creatingPath !== '/' && (
+            <div className="text-xs text-muted-foreground px-2">
+              Creating in: <span className="font-mono">{creatingPath}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1 px-2 py-1 bg-[#2A2D2E] rounded">
+            <FileIcon 
+              node={creatingType === 'folder' ? { directory: {}, open: false } : { file: { size: 0, isBinary: false } }} 
+              name={newItemName || 'untitled'} 
+            />
+            <input
+              ref={inputRef}
+              type="text"
+              value={newItemName}
+              onChange={(e) => setNewItemName(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={creatingType === 'file' ? 'filename.ext' : 'foldername'}
+              className="flex-1 bg-transparent border-none outline-none text-xs px-1"
+            />
+            <button
+              className="p-0.5 hover:bg-[#3A3D3E] rounded transition-colors"
+              onClick={handleConfirmCreate}
+              title="Confirm"
+            >
+              <Check size={14} className="text-green-500" />
+            </button>
+            <button
+              className="p-0.5 hover:bg-[#3A3D3E] rounded transition-colors"
+              onClick={handleCancelCreate}
+              title="Cancel"
+            >
+              <X size={14} className="text-red-500" />
+            </button>
+          </div>
         </div>
       )}
       
       <ScrollArea className="h-[93vh]">
         <div className="min-w-0">
           {sorted.map(([name, node]) => (
-            <FileTreeNode key={name} name={name} node={node} level={0} fullPath={"/" + name} />
+            <FileTreeNode 
+              key={name} 
+              name={name} 
+              node={node} 
+              level={0} 
+              fullPath={"/" + name}
+              onCreateFile={handleContextCreateFile}
+              onCreateFolder={handleContextCreateFolder}
+              onDelete={handleDelete}
+            />
           ))}
         </div>
       </ScrollArea>
