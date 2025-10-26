@@ -5,7 +5,10 @@ export async function GET(request: NextRequest) {
   const clientId = process.env.GITHUB_CLIENT_ID;
 
   if (!clientId) {
-    return NextResponse.json({ error: "GitHub client ID not configured" }, { status: 500 });
+    return NextResponse.json(
+      { error: "GitHub client ID not configured" },
+      { status: 500 },
+    );
   }
 
   // GitHub OAuth authorization URL

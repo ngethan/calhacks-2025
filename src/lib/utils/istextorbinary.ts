@@ -3,11 +3,11 @@
 /* eslint no-use-before-define:0 */
 
 export interface EncodingOpts {
-	/** Defaults to 24 */
-	chunkLength?: number
+  /** Defaults to 24 */
+  chunkLength?: number;
 
-	/** If not provided, will check the start, beginning, and end */
-	chunkBegin?: number
+  /** If not provided, will check the start, beginning, and end */
+  chunkBegin?: number;
 }
 
 /**
@@ -17,73 +17,72 @@ export interface EncodingOpts {
  * @returns Will be `null` if `buffer` was not provided. Otherwise will be either `'utf8'` or `'binary'`
  */
 export function getEncoding(
-	buffer: Buffer | null,
-	opts?: EncodingOpts
-): 'utf8' | 'binary' | null {
-	// Check
-	if (!buffer) return null
+  buffer: Buffer | null,
+  opts?: EncodingOpts,
+): "utf8" | "binary" | null {
+  // Check
+  if (!buffer) return null;
 
-	// Prepare
-	const textEncoding = 'utf8'
-	const binaryEncoding = 'binary'
-	const chunkLength = opts?.chunkLength ?? 24
-	let chunkBegin = opts?.chunkBegin ?? 0
+  // Prepare
+  const textEncoding = "utf8";
+  const binaryEncoding = "binary";
+  const chunkLength = opts?.chunkLength ?? 24;
+  let chunkBegin = opts?.chunkBegin ?? 0;
 
-	// Discover
-	if (opts?.chunkBegin == null) {
-		// Start
-		let encoding = getEncoding(buffer, { chunkLength, chunkBegin })
-		if (encoding === textEncoding) {
-			// Middle
-			chunkBegin = Math.max(0, Math.floor(buffer.length / 2) - chunkLength)
-			encoding = getEncoding(buffer, {
-				chunkLength,
-				chunkBegin,
-			})
-			if (encoding === textEncoding) {
-				// End
-				chunkBegin = Math.max(0, buffer.length - chunkLength)
-				encoding = getEncoding(buffer, {
-					chunkLength,
-					chunkBegin,
-				})
-			}
-		}
+  // Discover
+  if (opts?.chunkBegin == null) {
+    // Start
+    let encoding = getEncoding(buffer, { chunkLength, chunkBegin });
+    if (encoding === textEncoding) {
+      // Middle
+      chunkBegin = Math.max(0, Math.floor(buffer.length / 2) - chunkLength);
+      encoding = getEncoding(buffer, {
+        chunkLength,
+        chunkBegin,
+      });
+      if (encoding === textEncoding) {
+        // End
+        chunkBegin = Math.max(0, buffer.length - chunkLength);
+        encoding = getEncoding(buffer, {
+          chunkLength,
+          chunkBegin,
+        });
+      }
+    }
 
-		// Return
-		return encoding
-	} else {
-		// Extract
-		chunkBegin = getChunkBegin(buffer, chunkBegin)
-		if (chunkBegin === -1) {
-			return binaryEncoding
-		}
+    // Return
+    return encoding;
+  }
+  // Extract
+  chunkBegin = getChunkBegin(buffer, chunkBegin);
+  if (chunkBegin === -1) {
+    return binaryEncoding;
+  }
 
-		const chunkEnd = getChunkEnd(
-			buffer,
-			Math.min(buffer.length, chunkBegin + chunkLength)
-		)
+  const chunkEnd = getChunkEnd(
+    buffer,
+    Math.min(buffer.length, chunkBegin + chunkLength),
+  );
 
-		if (chunkEnd > buffer.length) {
-			return binaryEncoding
-		}
+  if (chunkEnd > buffer.length) {
+    return binaryEncoding;
+  }
 
-		const contentChunkUTF8 = buffer.toString(textEncoding, chunkBegin, chunkEnd)
+  const contentChunkUTF8 = buffer.toString(textEncoding, chunkBegin, chunkEnd);
 
-		// Detect encoding
-		for (let i = 0; i < contentChunkUTF8.length; ++i) {
-			const charCode = contentChunkUTF8.charCodeAt(i)
-			if (charCode === 65533 || charCode <= 8) {
-				// 8 and below are control characters (e.g. backspace, null, eof, etc.)
-				// 65533 is the unknown character
-				// console.log(charCode, contentChunkUTF8[i])
-				return binaryEncoding
-			}
-		}
+  // Detect encoding
+  for (let i = 0; i < contentChunkUTF8.length; ++i) {
+    const charCode = contentChunkUTF8.charCodeAt(i);
+    if (charCode === 65533 || charCode <= 8) {
+      // 8 and below are control characters (e.g. backspace, null, eof, etc.)
+      // 65533 is the unknown character
+      // console.log(charCode, contentChunkUTF8[i])
+      return binaryEncoding;
+    }
+  }
 
-		// Return
-		return textEncoding
-	}
+  // Return
+  return textEncoding;
 }
 
 // ====================================
@@ -92,107 +91,107 @@ export function getEncoding(
 // @todo add documentation for these
 
 function getChunkBegin(buf: Buffer, chunkBegin: number) {
-	// If it's the beginning, just return.
-	if (chunkBegin === 0) {
-		return 0
-	}
+  // If it's the beginning, just return.
+  if (chunkBegin === 0) {
+    return 0;
+  }
 
-	if (!isLaterByteOfUtf8(buf[chunkBegin])) {
-		return chunkBegin
-	}
+  if (!isLaterByteOfUtf8(buf[chunkBegin])) {
+    return chunkBegin;
+  }
 
-	let begin = chunkBegin - 3
+  let begin = chunkBegin - 3;
 
-	if (begin >= 0) {
-		if (isFirstByteOf4ByteChar(buf[begin])) {
-			return begin
-		}
-	}
+  if (begin >= 0) {
+    if (isFirstByteOf4ByteChar(buf[begin])) {
+      return begin;
+    }
+  }
 
-	begin = chunkBegin - 2
+  begin = chunkBegin - 2;
 
-	if (begin >= 0) {
-		if (
-			isFirstByteOf4ByteChar(buf[begin]) ||
-			isFirstByteOf3ByteChar(buf[begin])
-		) {
-			return begin
-		}
-	}
+  if (begin >= 0) {
+    if (
+      isFirstByteOf4ByteChar(buf[begin]) ||
+      isFirstByteOf3ByteChar(buf[begin])
+    ) {
+      return begin;
+    }
+  }
 
-	begin = chunkBegin - 1
+  begin = chunkBegin - 1;
 
-	if (begin >= 0) {
-		// Is it a 4-byte, 3-byte utf8 character?
-		if (
-			isFirstByteOf4ByteChar(buf[begin]) ||
-			isFirstByteOf3ByteChar(buf[begin]) ||
-			isFirstByteOf2ByteChar(buf[begin])
-		) {
-			return begin
-		}
-	}
+  if (begin >= 0) {
+    // Is it a 4-byte, 3-byte utf8 character?
+    if (
+      isFirstByteOf4ByteChar(buf[begin]) ||
+      isFirstByteOf3ByteChar(buf[begin]) ||
+      isFirstByteOf2ByteChar(buf[begin])
+    ) {
+      return begin;
+    }
+  }
 
-	return -1
+  return -1;
 }
 
 function getChunkEnd(buf: Buffer, chunkEnd: number) {
-	// If it's the end, just return.
-	if (chunkEnd === buf.length) {
-		return chunkEnd
-	}
+  // If it's the end, just return.
+  if (chunkEnd === buf.length) {
+    return chunkEnd;
+  }
 
-	let index = chunkEnd - 3
+  let index = chunkEnd - 3;
 
-	if (index >= 0) {
-		if (isFirstByteOf4ByteChar(buf[index])) {
-			return chunkEnd + 1
-		}
-	}
+  if (index >= 0) {
+    if (isFirstByteOf4ByteChar(buf[index])) {
+      return chunkEnd + 1;
+    }
+  }
 
-	index = chunkEnd - 2
+  index = chunkEnd - 2;
 
-	if (index >= 0) {
-		if (isFirstByteOf4ByteChar(buf[index])) {
-			return chunkEnd + 2
-		}
+  if (index >= 0) {
+    if (isFirstByteOf4ByteChar(buf[index])) {
+      return chunkEnd + 2;
+    }
 
-		if (isFirstByteOf3ByteChar(buf[index])) {
-			return chunkEnd + 1
-		}
-	}
+    if (isFirstByteOf3ByteChar(buf[index])) {
+      return chunkEnd + 1;
+    }
+  }
 
-	index = chunkEnd - 1
+  index = chunkEnd - 1;
 
-	if (index >= 0) {
-		if (isFirstByteOf4ByteChar(buf[index])) {
-			return chunkEnd + 3
-		}
+  if (index >= 0) {
+    if (isFirstByteOf4ByteChar(buf[index])) {
+      return chunkEnd + 3;
+    }
 
-		if (isFirstByteOf3ByteChar(buf[index])) {
-			return chunkEnd + 2
-		}
+    if (isFirstByteOf3ByteChar(buf[index])) {
+      return chunkEnd + 2;
+    }
 
-		if (isFirstByteOf2ByteChar(buf[index])) {
-			return chunkEnd + 1
-		}
-	}
+    if (isFirstByteOf2ByteChar(buf[index])) {
+      return chunkEnd + 1;
+    }
+  }
 
-	return chunkEnd
+  return chunkEnd;
 }
 
 function isFirstByteOf4ByteChar(byte: number) {
-	return byte >> 3 === 30 // 11110xxx?
+  return byte >> 3 === 30; // 11110xxx?
 }
 
 function isFirstByteOf3ByteChar(byte: number) {
-	return byte >> 4 === 14 // 1110xxxx?
+  return byte >> 4 === 14; // 1110xxxx?
 }
 
 function isFirstByteOf2ByteChar(byte: number) {
-	return byte >> 5 === 6 // 110xxxxx?
+  return byte >> 5 === 6; // 110xxxxx?
 }
 
 function isLaterByteOfUtf8(byte: number) {
-	return byte >> 6 === 2 // 10xxxxxx?
+  return byte >> 6 === 2; // 10xxxxxx?
 }

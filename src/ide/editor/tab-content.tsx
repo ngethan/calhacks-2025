@@ -3,22 +3,33 @@ import { IFrame } from "@/ide/iframe";
 import { useMemo } from "react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 
-export const TabContent = ({ tab, path, index }: { tab: string, path: string, index: number }) => {
+export const TabContent = ({
+  tab,
+  path,
+  index,
+}: {
+  tab: string;
+  path: string;
+  index: number;
+}) => {
   const { name, internal } = useMemo(() => {
     if (path.startsWith("internal:")) {
-      return { name: path.substring(path.lastIndexOf(':') + 1), internal: true };
+      return {
+        name: path.substring(path.lastIndexOf(":") + 1),
+        internal: true,
+      };
     }
-    return { name: path.substring(path.lastIndexOf('/') + 1), internal: false };
+    return { name: path.substring(path.lastIndexOf("/") + 1), internal: false };
   }, [path]);
 
   if (internal) {
     if (name === "preview") {
       return (
-        <TabsPrimitive.Content value={index + ""} className="h-full w-full">
+        <TabsPrimitive.Content value={`${index}`} className="h-full w-full">
           <IFrame />
         </TabsPrimitive.Content>
       );
     }
   }
   return <EditorTabContent tab={tab} path={path} index={index} />;
-}
+};

@@ -33,26 +33,26 @@ export type FSFile = {
   file: {
     size: number;
     isBinary: boolean;
-  }
-}
+  };
+};
 export type FSDirectory = {
   directory: {
     [key: string]: FSFile | FSDirectory | FSSymlink;
-  }
+  };
   open: boolean;
-}
+};
 export type FSSymlink = {
   symlink: {
     target: string;
-  }
-}
+  };
+};
 
 export type FSNode = FSFile | FSDirectory | FSSymlink;
 
 type FileSystemState = {
   files: FSDirectory;
   setFiles: (files: FSDirectory) => void;
-}
+};
 
 export const useFileSystem = create<FileSystemState>()(
   immer((set) => ({
@@ -61,5 +61,5 @@ export const useFileSystem = create<FileSystemState>()(
       open: true,
     },
     setFiles: (files) => set({ files }),
-  }))
-)
+  })),
+);

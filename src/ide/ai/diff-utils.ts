@@ -1,5 +1,5 @@
-import { parseDiff } from "react-diff-view";
 import * as Diff from "diff";
+import { parseDiff } from "react-diff-view";
 
 export type FileEdit = {
   path: string;
