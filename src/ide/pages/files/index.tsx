@@ -1,15 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ChevronRight, ChevronDown, FilePlus, FolderPlus, RefreshCw, MoreHorizontal, ListCollapse, X, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from "react";
+import {
+  ChevronRight,
+  ChevronDown,
+  FilePlus,
+  FolderPlus,
+  RefreshCw,
+  MoreHorizontal,
+  ListCollapse,
+  X,
+  Check,
+} from "lucide-react";
 import type { FSNode } from "@/ide/filesystem";
 import type { FSDirectory } from "@/ide/filesystem";
 import { useFileSystem } from "@/ide/filesystem";
-import { FileIcon } from '@/components/file-icon';
-import { fileSystem } from '@/ide/filesystem/zen-fs';
-import { addOpenFile } from '@/ide/editor';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { getWebContainer } from '@/components/container';
+import { FileIcon } from "@/components/file-icon";
+import { fileSystem } from "@/ide/filesystem/zen-fs";
+import { addOpenFile } from "@/ide/editor";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { getWebContainer } from "@/components/container";
 interface FileTreeNodeProps {
   name: string;
   level: number;
@@ -17,41 +27,46 @@ interface FileTreeNodeProps {
   node: FSNode;
 }
 
-
 const sortedEntries = (files: FSDirectory) => {
   return Object.entries(files.directory).sort((a, b) => {
-    const aIsDirectory = 'directory' in a[1];
-    const bIsDirectory = 'directory' in b[1];
-    if (aIsDirectory !== bIsDirectory) { // prioritize directories
+    const aIsDirectory = "directory" in a[1];
+    const bIsDirectory = "directory" in b[1];
+    if (aIsDirectory !== bIsDirectory) {
+      // prioritize directories
       return aIsDirectory ? -1 : 1;
     }
     return a[0].localeCompare(b[0]); // sort alphabetically
   });
-}
-export const FileTreeNode: React.FC<FileTreeNodeProps> = ({ name, node, level, fullPath }) => {
+};
+export const FileTreeNode: React.FC<FileTreeNodeProps> = ({
+  name,
+  node,
+  level,
+  fullPath,
+}) => {
   const [isOpen, setIsOpen] = useState((node as FSDirectory).open || false);
   const { setFiles, files } = useFileSystem();
 
   // Sync local state with node's open property when it changes
   useEffect(() => {
-    if ('directory' in node) {
+    if ("directory" in node) {
       setIsOpen(node.open || false);
     }
   }, [node]);
 
   const click = () => {
-    console.log(" -> node", node)
-    if ('directory' in node) {
+    console.log(" -> node", node);
+    if ("directory" in node) {
       setIsOpen(!isOpen);
       console.log("toggle", fullPath);
       let current = files;
-      const parts = fullPath.split('/').filter(Boolean);
+      const parts = fullPath.split("/").filter(Boolean);
       for (let i = 0; i < parts.length; i++) {
         const part = parts[i];
         if (!part) continue;
         if (i === parts.length - 1) {
           const targetNode = current.directory[part];
-          if (targetNode && 'directory' in targetNode) {
+          if (targetNode && "directory" in targetNode) {
             current.directory[part] = {
               ...targetNode,
               open: !isOpen,
@@ -62,13 +77,13 @@ export const FileTreeNode: React.FC<FileTreeNodeProps> = ({ name, node, level, f
         }
       }
       setFiles({ ...files });
-    } else if ('symlink' in node) {
+    } else if ("symlink" in node) {
       const target = node.symlink.target;
       const targetPath = `${fullPath}/${target}`; // TODO: make sure this works
       if (fileSystem.canOpenFile(targetPath)) {
         addOpenFile(targetPath);
       }
-    } else if ('file' in node) {
+    } else if ("file" in node) {
       if (!node.file.isBinary) {
         addOpenFile(fullPath);
       } else {
@@ -100,10 +115,10 @@ export const FileTreeNode: React.FC<FileTreeNodeProps> = ({ name, node, level, f
   };
 
   const getIcon = () => {
-    return <FileIcon node={node} name={name} />
+    return <FileIcon node={node} name={name} />;
   };
   const getChevron = () => {
-    if ('directory' in node) {
+    if ("directory" in node) {
       return isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />;
     }
     return <span className="w-4" />;
@@ -113,15 +128,20 @@ export const FileTreeNode: React.FC<FileTreeNodeProps> = ({ name, node, level, f
   return (
     <div className="group/tree relative">
       {level > 0 && (
-        <div className="absolute w-px bg-transparent group-hover/tree:bg-[#606060] transition-colors z-10"
-          style={{ // this is the line
+        <div
+          className="absolute z-10 w-px bg-transparent transition-colors group-hover/tree:bg-[#606060]"
+          style={{
+            // this is the line
             left: `${level * 8 + 4}px`,
             top: 0,
             bottom: 0,
-          }} />
+          }}
+        />
       )}
       <div
-        className={`flex items-center py-1 px-2 hover:bg-[#2A2D2E] cursor-pointer relative`}
+        className={
+          "relative flex cursor-pointer items-center px-2 py-1 hover:bg-[#2A2D2E]"
+        }
         style={{
           paddingLeft: `${level * 8 + 12}px`,
         }}
@@ -129,12 +149,18 @@ export const FileTreeNode: React.FC<FileTreeNodeProps> = ({ name, node, level, f
       >
         {getChevron()}
         {getIcon()}
-        <span className="ml-1 text-xs truncate">{name}</span>
+        <span className="ml-1 truncate text-xs">{name}</span>
       </div>
-      {isOpen && 'directory' in node && (
+      {isOpen && "directory" in node && (
         <div>
           {sorted.map(([childName, childNode]) => (
-            <FileTreeNode key={childName} name={childName} node={childNode} level={level + 1} fullPath={`${fullPath}/${childName}`} />
+            <FileTreeNode
+              key={childName}
+              name={childName}
+              node={childNode}
+              level={level + 1}
+              fullPath={`${fullPath}/${childName}`}
+            />
           ))}
         </div>
       )}
@@ -145,8 +171,10 @@ export const FileTreeNode: React.FC<FileTreeNodeProps> = ({ name, node, level, f
 export const FilesPage = () => {
   const { files, setFiles } = useFileSystem();
   const sorted = sortedEntries(files);
-  const [creatingType, setCreatingType] = useState<'file' | 'folder' | null>(null);
-  const [newItemName, setNewItemName] = useState('');
+  const [creatingType, setCreatingType] = useState<"file" | "folder" | null>(
+    null
+  );
+  const [newItemName, setNewItemName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -156,74 +184,78 @@ export const FilesPage = () => {
   }, [creatingType]);
 
   const handleCreateFile = () => {
-    setCreatingType('file');
-    setNewItemName('');
+    setCreatingType("file");
+    setNewItemName("");
   };
 
   const handleCreateFolder = () => {
-    setCreatingType('folder');
-    setNewItemName('');
+    setCreatingType("folder");
+    setNewItemName("");
   };
 
   const handleConfirmCreate = async () => {
     if (!newItemName.trim()) {
-      toast.error('Please enter a name');
+      toast.error("Please enter a name");
       return;
     }
 
     const path = `/${newItemName}`;
-    
+
     try {
       const container = getWebContainer();
-      if (!container || container.status !== 'ready') {
-        toast.error('WebContainer not ready');
+      if (!container || container.status !== "ready") {
+        toast.error("WebContainer not ready");
         return;
       }
 
-      if (creatingType === 'file') {
-        await container.webContainer?.fs.writeFile(path, '');
+      if (creatingType === "file") {
+        await container.webContainer?.fs.writeFile(path, "");
         toast.success(`File "${newItemName}" created`);
         // Open the newly created file
         setTimeout(() => addOpenFile(path), 100);
-      } else if (creatingType === 'folder') {
+      } else if (creatingType === "folder") {
         await container.webContainer?.fs.mkdir(path, { recursive: false });
         toast.success(`Folder "${newItemName}" created`);
       }
     } catch (error) {
-      console.error('Error creating item:', error);
-      toast.error(`Failed to create ${creatingType}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Error creating item:", error);
+      toast.error(
+        `Failed to create ${creatingType}: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
 
     setCreatingType(null);
-    setNewItemName('');
+    setNewItemName("");
   };
 
   const handleCancelCreate = () => {
     setCreatingType(null);
-    setNewItemName('');
+    setNewItemName("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleConfirmCreate();
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       handleCancelCreate();
     }
   };
 
   const collapseAll = () => {
     const collapseRecursive = (node: FSNode): FSNode => {
-      if ('directory' in node) {
+      if ("directory" in node) {
         const collapsedDirectory: FSDirectory = {
           directory: {},
           open: false,
         };
-        
+
         // Recursively collapse all subdirectories
         for (const [key, childNode] of Object.entries(node.directory)) {
           collapsedDirectory.directory[key] = collapseRecursive(childNode);
         }
-        
+
         return collapsedDirectory;
       }
       return node;
@@ -236,9 +268,12 @@ export const FilesPage = () => {
   return (
     <div className="group bg-sidebar p-2 font-mono text-sm h-full overflow-auto">
       <div className="group/header flex items-center justify-between mb-2">
-        <h2 className="font-semibold font-sans text-xs uppercase text-muted-foreground">Explorer</h2>
+        <h2 className="font-semibold font-sans text-xs uppercase text-muted-foreground">
+          Explorer
+        </h2>
         <div className="flex items-center gap-1 opacity-0 group-hover/header:opacity-100 transition-opacity">
           <button
+            type="button"
             className="p-1 hover:bg-[#2A2D2E] rounded transition-colors"
             title="New File"
             onClick={handleCreateFile}
@@ -246,6 +281,7 @@ export const FilesPage = () => {
             <FilePlus size={16} className="text-muted-foreground" />
           </button>
           <button
+            type="button"
             className="p-1 hover:bg-[#2A2D2E] rounded transition-colors"
             title="New Folder"
             onClick={handleCreateFolder}
@@ -253,6 +289,7 @@ export const FilesPage = () => {
             <FolderPlus size={16} className="text-muted-foreground" />
           </button>
           <button
+            type="button"
             className="p-1 hover:bg-[#2A2D2E] rounded transition-colors"
             title="Collapse All"
             onClick={collapseAll}
@@ -261,12 +298,16 @@ export const FilesPage = () => {
           </button>
         </div>
       </div>
-      
+
       {creatingType && (
         <div className="mb-2 flex items-center gap-1 px-2 py-1 bg-[#2A2D2E] rounded">
-          <FileIcon 
-            node={creatingType === 'folder' ? { directory: {}, open: false } : { file: { size: 0, isBinary: false } }} 
-            name={newItemName || 'untitled'} 
+          <FileIcon
+            node={
+              creatingType === "folder"
+                ? { directory: {}, open: false }
+                : { file: { size: 0, isBinary: false } }
+            }
+            name={newItemName || "untitled"}
           />
           <input
             ref={inputRef}
@@ -274,10 +315,13 @@ export const FilesPage = () => {
             value={newItemName}
             onChange={(e) => setNewItemName(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={creatingType === 'file' ? 'filename.ext' : 'foldername'}
+            placeholder={
+              creatingType === "file" ? "filename.ext" : "foldername"
+            }
             className="flex-1 bg-transparent border-none outline-none text-xs px-1"
           />
           <button
+            type="button"
             className="p-0.5 hover:bg-[#3A3D3E] rounded transition-colors"
             onClick={handleConfirmCreate}
             title="Confirm"
@@ -285,6 +329,7 @@ export const FilesPage = () => {
             <Check size={14} className="text-green-500" />
           </button>
           <button
+            type="button"
             className="p-0.5 hover:bg-[#3A3D3E] rounded transition-colors"
             onClick={handleCancelCreate}
             title="Cancel"
@@ -293,14 +338,20 @@ export const FilesPage = () => {
           </button>
         </div>
       )}
-      
+
       <ScrollArea className="h-[93vh]">
         <div className="min-w-0">
           {sorted.map(([name, node]) => (
-            <FileTreeNode key={name} name={name} node={node} level={0} fullPath={"/" + name} />
+            <FileTreeNode
+              key={name}
+              name={name}
+              node={node}
+              level={0}
+              fullPath={`/${name}`}
+            />
           ))}
         </div>
       </ScrollArea>
     </div>
   );
-}
+};

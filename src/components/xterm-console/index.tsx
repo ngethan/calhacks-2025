@@ -1,7 +1,7 @@
-import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { useEffect, createContext, useRef } from "react";
+import { Terminal } from "@xterm/xterm";
+import { createContext, useEffect, useRef } from "react";
 
 import { ResizablePanel } from "@/components/ui/resizable";
 
@@ -46,9 +46,10 @@ const XTermConsole = () => {
     }),
   );
   const fitAddon = useRef<FitAddon>(new FitAddon());
-  const { status, shellProcess, addListener, removeListener } = useWebContainer();
+  const { status, shellProcess, addListener, removeListener } =
+    useWebContainer();
   useEffect(() => {
-    term.current.write('\x1b[34m[WebContainer]\x1b[0m ' + status + '\n');
+    term.current.write(`\x1b[34m[WebContainer]\x1b[0m ${status}\n`);
   }, [status]);
 
   const resize = () => {
@@ -59,7 +60,7 @@ const XTermConsole = () => {
         rows: term.current.rows,
       });
     }
-  }
+  };
 
   useEffect(() => {
     if (termRef.current) {
@@ -96,40 +97,36 @@ const XTermConsole = () => {
   }, [termRef]);
 
   useEffect(() => {
-    const shellOutputListenerId = addListener('shell-output', (data) => {
+    const shellOutputListenerId = addListener("shell-output", (data) => {
       term.current.write(data);
     });
 
     return () => {
-      removeListener('shell-output', shellOutputListenerId);
-    }
- }, [addListener, removeListener, shellProcess]);
+      removeListener("shell-output", shellOutputListenerId);
+    };
+  }, [addListener, removeListener, shellProcess]);
 
- useEffect(() => {
-  if (shellProcess) {
-    if (shellProcess.input.locked) {
-      term.current.write("Input is locked\n");
-      return;
+  useEffect(() => {
+    if (shellProcess) {
+      if (shellProcess.input.locked) {
+        term.current.write("Input is locked\n");
+        return;
+      }
+      const input = shellProcess.input.getWriter();
+      resize();
+      const disposable = term.current.onData((data) => {
+        input.write(data);
+      });
+      return () => {
+        disposable.dispose();
+        input.close();
+      };
     }
-    const input = shellProcess.input.getWriter();
-    resize();
-    const disposable = term.current.onData((data) => {
-      input.write(data);
-    });
-    return () => {
-      disposable.dispose();
-      input.close();
-    }
-  }
- }, [shellProcess])
+  }, [shellProcess]);
 
   return (
-    <ResizablePanel
-      defaultSize={30}
-      onResize={resize}
-      className="h-full"
-    >
-      <div id="terminal" ref={termRef} className={"w-full h-full"}></div>
+    <ResizablePanel defaultSize={30} onResize={resize} className="h-full">
+      <div id="terminal" ref={termRef} className={"h-full w-full"} />
     </ResizablePanel>
   );
 };

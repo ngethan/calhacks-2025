@@ -20,8 +20,11 @@ export type FileContext = {
  */
 export function getCurrentFileContext(
   activeWindow: number | null,
-  windows: Array<{ tabs: Array<{ path: string; content: string }>; activeTab: number }>,
-  getFileContent: (path: string) => string | null
+  windows: Array<{
+    tabs: Array<{ path: string; content: string }>;
+    activeTab: number;
+  }>,
+  getFileContent: (path: string) => string | null,
 ): FileContext | undefined {
   if (activeWindow === null) return undefined;
   const window = windows[activeWindow];
@@ -51,7 +54,7 @@ export function parseFileMentions(input: string): string[] {
  */
 export function getMultiFileContext(
   paths: string[],
-  getFileContent: (path: string) => string | null
+  getFileContent: (path: string) => string | null,
 ): FileContext[] {
   return paths
     .map((path) => ({

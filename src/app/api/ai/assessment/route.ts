@@ -1,8 +1,8 @@
+import { env } from "@/env";
+import { auth } from "@/lib/auth";
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText } from "ai";
 import { z } from "zod";
-import { env } from "@/env";
-import { auth } from "@/lib/auth";
 
 const openrouter = createOpenAI({
   apiKey: env.OPENROUTER_API_KEY,
@@ -18,14 +18,26 @@ Your job is to create a coding challenge that tests candidates real-world web de
 
 Context:
 
-Candidates will use an AI-assisted coding environment with a local development server. The rigor of the challenge should account for the user using ai assistance, while not being overly complex${framework ? `\n\nThe candidate will be using ${framework === "react-router-v7" ? "React Router v7" : "Next.js"} for this challenge.` : ""}
+Candidates will use an AI-assisted coding environment with a local development server. The rigor of the challenge should account for the user using ai assistance, while not being overly complex${
+  framework
+    ? `\n\nThe candidate will be using ${
+        framework === "react-router-v7" ? "React Router v7" : "Next.js"
+      } for this challenge.`
+    : ""
+}
 
 Guidelines:
 Focus on practical, open-ended tasks that require design and reasoning e.g., building an interactive component, implementing a CRUD flow, or integrating frontend logic.
 
 The instructions should set a realistic scenario (e.g., a small feature request or mini-app) without over-specifying the implementation details. don't include things like schema or mock api routes. Provide 2 main features for the user to implement.
 
-Avoid including unnecessary boilerplate and overspecification in your question.${framework ? ` Keep in mind the candidate will be using ${framework === "react-router-v7" ? "React Router v7" : "Next.js"}.` : " For context the app will be built using one of the following frameworks(you don't need to tell the user this): react router v7/nextjs/vue"}
+Avoid including unnecessary boilerplate and overspecification in your question.${
+  framework
+    ? ` Keep in mind the candidate will be using ${
+        framework === "react-router-v7" ? "React Router v7" : "Next.js"
+      }.`
+    : " For context the app will be built using one of the following frameworks(you don't need to tell the user this): react router v7/nextjs/vue"
+}
 
 don't include "optional extra features"
 
@@ -42,10 +54,13 @@ export async function POST(req: Request) {
     if (!session?.user) {
       console.log("[Assessment API] Unauthorized request");
       return new Response(
-        JSON.stringify({ error: "Unauthorized", message: "Please log in to access this feature" }),
-        { 
+        JSON.stringify({
+          error: "Unauthorized",
+          message: "Please log in to access this feature",
+        }),
+        {
           status: 401,
-          headers: { "Content-Type": "application/json" }
+          headers: { "Content-Type": "application/json" },
         }
       );
     }
