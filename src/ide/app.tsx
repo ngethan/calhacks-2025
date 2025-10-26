@@ -35,7 +35,7 @@ const App = () => {
         <div className="flex shrink-0 items-center justify-between gap-2 border-border border-b bg-sidebar px-4 py-2">
           <p>CalHacks</p>
           <p>Recipe App (10:23 left)</p>
-          <div>
+          <div className="flex flex-row gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -73,7 +73,7 @@ const App = () => {
             <IDESidebar />
             <IFrameProvider>
               <ResizablePanelGroup direction="horizontal">
-                <ResizablePanel defaultSize={15} minSize={12} maxSize={30}>
+                <ResizablePanel defaultSize={15} minSize={12} maxSize={30} collapsible>
                   <IDESidebarContent />
                 </ResizablePanel>
                 <ResizableHandle withHandle />
@@ -82,7 +82,7 @@ const App = () => {
                     <ResizablePanel>
                       <ResizablePanelGroup
                         direction="vertical"
-                        className="h-full max-h-screen min-h-screen"
+                        className="h-full max-h-screen"
                       >
                         <ResizablePanel>
                           <ResizablePanelGroup direction="horizontal">
