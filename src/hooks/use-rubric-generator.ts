@@ -78,6 +78,8 @@ export function useRubricGenerator() {
             console.log("═".repeat(50));
 
             // Save rubric to database
+            console.log("📤 Sending rubric to database...");
+            console.log("Session ID:", sessionId);
             return fetch("/api/assessment/rubric", {
               method: "POST",
               headers: {
@@ -89,9 +91,16 @@ export function useRubricGenerator() {
               }),
             });
           })
-          .then((response) => {
+          .then(async (response) => {
             if (response?.ok) {
-              console.log("✅ Rubric saved to database");
+              const data = await response.json();
+              console.log("✅ Rubric saved to database successfully");
+              console.log("Response:", data);
+            } else {
+              const errorText = await response?.text();
+              console.error("❌ Failed to save rubric to database");
+              console.error("Status:", response?.status);
+              console.error("Error:", errorText);
             }
           });
       })

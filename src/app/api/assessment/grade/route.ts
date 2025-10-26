@@ -187,7 +187,8 @@ export async function POST(request: Request) {
     let rubric = submission.session.rubric as Record<string, unknown> | null;
     
     if (!rubric) {
-      console.log("[Grade API] Rubric not found, waiting for generation...");
+      console.log("[Grade API] ❌ Rubric not found in session, waiting for generation...");
+      console.log("[Grade API] Session ID:", submission.session.id);
       
       // Wait and retry up to 5 times (50 seconds total)
       for (let attempt = 1; attempt <= 5; attempt++) {
@@ -200,19 +201,24 @@ export async function POST(request: Request) {
         
         if (updatedSession?.rubric) {
           rubric = updatedSession.rubric as Record<string, unknown>;
-          console.log(`[Grade API] Rubric found after ${attempt} attempts`);
+          console.log(`[Grade API] ✅ Rubric found after ${attempt} attempts`);
+          console.log(`[Grade API] Rubric has keys:`, Object.keys(rubric));
           break;
         }
         
-        console.log(`[Grade API] Rubric still not found, attempt ${attempt}/5`);
+        console.log(`[Grade API] ⏳ Rubric still not found, attempt ${attempt}/5`);
       }
       
       if (!rubric) {
+        console.log("[Grade API] ❌ Rubric generation timed out after 50 seconds");
         return NextResponse.json(
           { error: "Rubric generation timed out. Please try again later." },
           { status: 408 } // Request Timeout
         );
       }
+    } else {
+      console.log("[Grade API] ✅ Rubric found in session immediately");
+      console.log("[Grade API] Rubric has keys:", Object.keys(rubric));
     }
 
     // Extract main files from code
@@ -244,7 +250,7 @@ export async function POST(request: Request) {
         },
       ],
       temperature: 0.3, // Lower temperature for consistent grading
-      maxTokens: 4096,
+      maxSteps: 10,
     });
 
     console.log("[Grade API] AI grading complete, parsing results...");
