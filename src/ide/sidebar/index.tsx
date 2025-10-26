@@ -1,5 +1,13 @@
 "use client";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -7,8 +15,12 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import { type AllPages, type Page, pages, useIDERouter } from "@/ide/router";
+import { signOut } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { LogOut, Settings } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { memo } from "react";
+import { toast } from "sonner";
 
 const SidebarButton = memo(
   ({
@@ -49,7 +61,20 @@ const SidebarButton = memo(
 );
 SidebarButton.displayName = "SidebarButton";
 export const IDESidebar = () => {
-  const router = useIDERouter();
+  const ideRouter = useIDERouter();
+  const nextRouter = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast.success("Logged out successfully");
+      nextRouter.push("/auth/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Failed to logout");
+    }
+  };
+
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
@@ -60,33 +85,33 @@ export const IDESidebar = () => {
               <SidebarButton
                 key={key}
                 page={page}
-                setPage={router.setPage}
+                setPage={ideRouter.setPage}
                 toPage={key as AllPages}
-                currentPage={router.page}
+                currentPage={ideRouter.page}
               />
             );
           })}
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        {Object.entries(pages).map(([key, page]) => {
-          if (!page.bottom) return null;
-          return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <SidebarMenuButton
-              asChild
-              key={key}
               className={cn(
                 "scale-150 rounded-none border-l-2 transition-colors hover:cursor-pointer",
-                router.page === key
-                  ? "border-l-blue-500 bg-sidebar-accent text-foreground"
-                  : "border-l-transparent text-muted-foreground",
+                "border-l-transparent text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
               )}
-              onClick={() => router.setPage(key as AllPages)}
             >
-              <page.icon size={96} />
+              <Settings size={96} />
             </SidebarMenuButton>
-          );
-        })}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="right" align="end" className="w-48">
+            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Logout</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarFooter>
     </Sidebar>
   );
