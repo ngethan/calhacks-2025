@@ -65,7 +65,7 @@ export default function SignUpPage() {
         {
           email: formData.email,
           password: formData.password,
-          name: formData.email.split("@")[0] ?? "User", // Use email prefix as name
+          name: formData.email.split("@")[0] || "User", // Use email prefix as name
         },
         {
           onSuccess: () => {
