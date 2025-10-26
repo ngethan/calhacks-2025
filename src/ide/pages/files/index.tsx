@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ChevronRight, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ChevronRight, ChevronDown, FilePlus, FolderPlus, RefreshCw, MoreHorizontal, ListCollapse, X, Check } from 'lucide-react';
 import type { FSNode } from "@/ide/filesystem";
 import type { FSDirectory } from "@/ide/filesystem";
 import { useFileSystem } from "@/ide/filesystem";
@@ -9,6 +9,7 @@ import { addOpenFile } from '@/ide/editor';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { getWebContainer } from '@/components/container';
 interface FileTreeNodeProps {
   name: string;
   level: number;
@@ -30,6 +31,13 @@ const sortedEntries = (files: FSDirectory) => {
 export const FileTreeNode: React.FC<FileTreeNodeProps> = ({ name, node, level, fullPath }) => {
   const [isOpen, setIsOpen] = useState((node as FSDirectory).open || false);
   const { setFiles, files } = useFileSystem();
+
+  // Sync local state with node's open property when it changes
+  useEffect(() => {
+    if ('directory' in node) {
+      setIsOpen(node.open || false);
+    }
+  }, [node]);
 
   const click = () => {
     console.log(" -> node", node)
@@ -135,12 +143,157 @@ export const FileTreeNode: React.FC<FileTreeNodeProps> = ({ name, node, level, f
 };
 
 export const FilesPage = () => {
-  const { files } = useFileSystem();
+  const { files, setFiles } = useFileSystem();
   const sorted = sortedEntries(files);
+  const [creatingType, setCreatingType] = useState<'file' | 'folder' | null>(null);
+  const [newItemName, setNewItemName] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (creatingType && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [creatingType]);
+
+  const handleCreateFile = () => {
+    setCreatingType('file');
+    setNewItemName('');
+  };
+
+  const handleCreateFolder = () => {
+    setCreatingType('folder');
+    setNewItemName('');
+  };
+
+  const handleConfirmCreate = async () => {
+    if (!newItemName.trim()) {
+      toast.error('Please enter a name');
+      return;
+    }
+
+    const path = `/${newItemName}`;
+    
+    try {
+      const container = getWebContainer();
+      if (!container || container.status !== 'ready') {
+        toast.error('WebContainer not ready');
+        return;
+      }
+
+      if (creatingType === 'file') {
+        await container.webContainer?.fs.writeFile(path, '');
+        toast.success(`File "${newItemName}" created`);
+        // Open the newly created file
+        setTimeout(() => addOpenFile(path), 100);
+      } else if (creatingType === 'folder') {
+        await container.webContainer?.fs.mkdir(path, { recursive: false });
+        toast.success(`Folder "${newItemName}" created`);
+      }
+    } catch (error) {
+      console.error('Error creating item:', error);
+      toast.error(`Failed to create ${creatingType}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
+    setCreatingType(null);
+    setNewItemName('');
+  };
+
+  const handleCancelCreate = () => {
+    setCreatingType(null);
+    setNewItemName('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleConfirmCreate();
+    } else if (e.key === 'Escape') {
+      handleCancelCreate();
+    }
+  };
+
+  const collapseAll = () => {
+    const collapseRecursive = (node: FSNode): FSNode => {
+      if ('directory' in node) {
+        const collapsedDirectory: FSDirectory = {
+          directory: {},
+          open: false,
+        };
+        
+        // Recursively collapse all subdirectories
+        for (const [key, childNode] of Object.entries(node.directory)) {
+          collapsedDirectory.directory[key] = collapseRecursive(childNode);
+        }
+        
+        return collapsedDirectory;
+      }
+      return node;
+    };
+
+    const newFiles = collapseRecursive(files) as FSDirectory;
+    setFiles(newFiles);
+  };
 
   return (
     <div className="group bg-sidebar p-2 font-mono text-sm h-full overflow-auto">
-      <h2 className="font-semibold font-sans mb-2 text-xs uppercase text-muted-foreground">Explorer</h2>
+      <div className="group/header flex items-center justify-between mb-2">
+        <h2 className="font-semibold font-sans text-xs uppercase text-muted-foreground">Explorer</h2>
+        <div className="flex items-center gap-1 opacity-0 group-hover/header:opacity-100 transition-opacity">
+          <button
+            className="p-1 hover:bg-[#2A2D2E] rounded transition-colors"
+            title="New File"
+            onClick={handleCreateFile}
+          >
+            <FilePlus size={16} className="text-muted-foreground" />
+          </button>
+          <button
+            className="p-1 hover:bg-[#2A2D2E] rounded transition-colors"
+            title="New Folder"
+            onClick={handleCreateFolder}
+          >
+            <FolderPlus size={16} className="text-muted-foreground" />
+          </button>
+          <button
+            className="p-1 hover:bg-[#2A2D2E] rounded transition-colors"
+            title="Collapse All"
+            onClick={collapseAll}
+          >
+            <ListCollapse size={16} className="text-muted-foreground" />
+          </button>
+        </div>
+      </div>
+      
+      {creatingType && (
+        <div className="mb-2 flex items-center gap-1 px-2 py-1 bg-[#2A2D2E] rounded">
+          <FileIcon 
+            node={creatingType === 'folder' ? { directory: {}, open: false } : { file: { size: 0, isBinary: false } }} 
+            name={newItemName || 'untitled'} 
+          />
+          <input
+            ref={inputRef}
+            type="text"
+            value={newItemName}
+            onChange={(e) => setNewItemName(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={creatingType === 'file' ? 'filename.ext' : 'foldername'}
+            className="flex-1 bg-transparent border-none outline-none text-xs px-1"
+          />
+          <button
+            className="p-0.5 hover:bg-[#3A3D3E] rounded transition-colors"
+            onClick={handleConfirmCreate}
+            title="Confirm"
+          >
+            <Check size={14} className="text-green-500" />
+          </button>
+          <button
+            className="p-0.5 hover:bg-[#3A3D3E] rounded transition-colors"
+            onClick={handleCancelCreate}
+            title="Cancel"
+          >
+            <X size={14} className="text-red-500" />
+          </button>
+        </div>
+      )}
+      
       <ScrollArea className="h-[93vh]">
         <div className="min-w-0">
           {sorted.map(([name, node]) => (

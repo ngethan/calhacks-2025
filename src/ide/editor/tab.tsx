@@ -6,10 +6,10 @@ import { useMemo } from "react";
 
 export const EditorTab = ({ path, index, windowIndex, showFullPath }: { path: string, index: number, windowIndex: number, showFullPath?: boolean }) => {
   const removeTabWithPath = useEditorState((state) => state.removeTabWithPath);
-  const { name, internal } = useMemo(() => {
+  const { name } = useMemo(() => {
     if (path.startsWith("internal:")) {
       let friendlyName = undefined;
-      if (name === "preview") {
+      if (path.substring(path.lastIndexOf(':') + 1) === "preview") {
         friendlyName = "Preview";
       }
       return { name: friendlyName || path.substring(path.lastIndexOf(':') + 1), internal: true };
