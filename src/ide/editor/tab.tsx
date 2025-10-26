@@ -7,9 +7,13 @@ import { useMemo } from "react";
 export const EditorTab = ({ path, index, windowIndex, showFullPath }: { path: string, index: number, windowIndex: number, showFullPath?: boolean }) => {
   const removeTabWithPath = useEditorState((state) => state.removeTabWithPath);
   const { name, internal } = useMemo(() => {
-    // if (path.startsWith("internal:")) {
-    //   return { name: path.substring(path.lastIndexOf(':') + 1), internal: true };
-    // }
+    if (path.startsWith("internal:")) {
+      let friendlyName = undefined;
+      if (name === "preview") {
+        friendlyName = "Preview";
+      }
+      return { name: friendlyName || path.substring(path.lastIndexOf(':') + 1), internal: true };
+    }
     if (showFullPath) {
       return { name: path, internal: false };
     }
@@ -17,7 +21,7 @@ export const EditorTab = ({ path, index, windowIndex, showFullPath }: { path: st
   }, [path, showFullPath]);
 
   return (
-    <TabsPrimitive.Trigger key={path} value={index + ""} className="p-2 flex flex-row gap-2 data-[state=active]:bg-editor-background hover:bg-sidebar-accent bg-sidebar border-t border-x border-sidebar-accent place-items-center max-w-[250px] min-w-0">
+    <TabsPrimitive.Trigger key={path} value={index + ""} className="p-2 flex flex-row gap-2 data-[state=active]:bg-editor-background data-[state=active]:border-b-2 data-[state=active]:border-b-blue-500 data-[state=active]:text-foreground hover:bg-sidebar-accent bg-sidebar border-t border-x border-sidebar-accent text-muted-foreground place-items-center max-w-[250px] min-w-0">
       <FileIcon node={{ file: { size: 0, isBinary: false } }} name={name} className="shrink-0" />
       <span className="truncate flex-1 min-w-0 text-sm" title={path}>
         {name}
