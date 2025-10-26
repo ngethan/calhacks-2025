@@ -43,7 +43,7 @@ const XTermConsole = () => {
         white: "#abb2bf",
         brightWhite: "#ffffff",
       },
-    }),
+    })
   );
   const fitAddon = useRef<FitAddon>(new FitAddon());
   const { status, shellProcess, addListener, removeListener } =

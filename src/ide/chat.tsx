@@ -2,7 +2,6 @@
 
 import { FileIcon } from "@/components/file-icon";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { getCurrentFileContext } from "@/ide/ai/context";
 import { type FileEdit, applyDiff, parseFileEdits } from "@/ide/ai/diff-utils";
@@ -24,7 +23,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
 
 const WORKSPACE_ROOT = "/home/workspace";
@@ -142,11 +141,11 @@ export const Chat = ({ onClose }: ChatProps) => {
   const [showSessions, setShowSessions] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
-  const [attachedFiles, setAttachedFiles] = useState<Set<string>>(new Set());
   const [showFilePicker, setShowFilePicker] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const previousFilePathRef = useRef<string | null>(null);
   const editorState = useEditorState();
 
   const {
@@ -158,6 +157,9 @@ export const Chat = ({ onClose }: ChatProps) => {
     renameSession,
     addMessage,
     updateLastMessage,
+    addAttachedFile,
+    removeAttachedFile,
+    setAttachedFiles,
   } = useChatStore();
 
   // Create initial session if none exists
@@ -169,6 +171,7 @@ export const Chat = ({ onClose }: ChatProps) => {
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
   const messages = activeSession?.messages || [];
+  const attachedFiles = activeSession?.attachedFiles || [];
 
   const getCurrentFile = () => {
     return getCurrentFileContext(
@@ -181,27 +184,47 @@ export const Chat = ({ onClose }: ChatProps) => {
     );
   };
 
-  const handleFileSelect = (file: FileContext) => {
-    setAttachedFiles((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(file.path)) {
-        newSet.delete(file.path);
-      } else {
-        newSet.add(file.path);
+  // Memoize current file path to use as dependency
+  const currentFilePath = useMemo(() => {
+    const file = getCurrentFileContext(
+      editorState.activeWindow,
+      editorState.windows,
+      (path) => {
+        const content = fileSystem.getEditableFileContent(path, true);
+        return typeof content === "string" ? content : null;
       }
-      return newSet;
-    });
+    );
+    return file?.path;
+  }, [editorState.activeWindow, editorState.windows]);
+
+  // Auto-track current file: whenever the active file changes, replace with current file
+  useEffect(() => {
+    if (!activeSessionId || !currentFilePath) return;
+
+    // Only update if the file path has actually changed
+    if (previousFilePathRef.current !== currentFilePath) {
+      previousFilePathRef.current = currentFilePath;
+      // Set to just the current file (this replaces previous auto-tracked file)
+      setAttachedFiles(activeSessionId, [currentFilePath]);
+    }
+  }, [currentFilePath, activeSessionId, setAttachedFiles]);
+
+  const handleFileSelect = (file: FileContext) => {
+    if (!activeSessionId) return;
+
+    if (attachedFiles.includes(file.path)) {
+      removeAttachedFile(activeSessionId, file.path);
+    } else {
+      addAttachedFile(activeSessionId, file.path);
+    }
 
     // Focus back on textarea
     textareaRef.current?.focus();
   };
 
   const handleRemoveFile = (filePath: string) => {
-    setAttachedFiles((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(filePath);
-      return newSet;
-    });
+    if (!activeSessionId) return;
+    removeAttachedFile(activeSessionId, filePath);
   };
 
   const handleOpenFilePicker = () => {
@@ -329,7 +352,7 @@ export const Chat = ({ onClose }: ChatProps) => {
     // Build user message with attached files
     let messageContent = input;
 
-    if (attachedFiles.size > 0) {
+    if (attachedFiles.length > 0) {
       const fileContents: string[] = [];
 
       for (const filePath of attachedFiles) {
@@ -348,9 +371,6 @@ export const Chat = ({ onClose }: ChatProps) => {
 
     const userMessage: Message = { role: "user", content: messageContent };
     const isFirstMessage = messages.length === 0;
-
-    // Clear attached files after sending
-    setAttachedFiles(new Set());
 
     // Create abort controller for this request
     abortControllerRef.current = new AbortController();
@@ -544,7 +564,7 @@ export const Chat = ({ onClose }: ChatProps) => {
   return (
     <div className="flex h-full max-h-screen flex-col overflow-y-scroll bg-card">
       {/* Header */}
-      <div className="flex items-center gap-2 border-border/50 border-b px-3 py-2.5">
+      <div className="relative flex items-center gap-2 border-border/50 border-b px-3 py-2.5">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <Button
             size="sm"
@@ -581,12 +601,10 @@ export const Chat = ({ onClose }: ChatProps) => {
             <X className="h-4 w-4" />
           </Button>
         )}
-      </div>
 
-      {/* Sessions Sidebar */}
-      {showSessions && (
-        <div className="border-border/50 border-b bg-muted/30">
-          <ScrollArea className="max-h-[200px]">
+        {/* Sessions Sidebar Dropdown */}
+        {showSessions && (
+          <div className="absolute left-3 right-3 top-full z-50 mt-1 max-h-[300px] overflow-y-auto rounded-md border border-border bg-card shadow-lg">
             <div className="space-y-1 p-2">
               {sessions.map((session) => (
                 <div
@@ -660,9 +678,9 @@ export const Chat = ({ onClose }: ChatProps) => {
                 </div>
               ))}
             </div>
-          </ScrollArea>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto">
@@ -728,7 +746,7 @@ export const Chat = ({ onClose }: ChatProps) => {
                 onSelect={handleFileSelect}
                 onClose={() => setShowFilePicker(false)}
                 searchQuery=""
-                selectedFiles={attachedFiles}
+                selectedFiles={new Set(attachedFiles)}
                 currentFilePath={getCurrentFile()?.path}
               />
             </div>
@@ -749,7 +767,7 @@ export const Chat = ({ onClose }: ChatProps) => {
               </Button>
 
               {/* Attached file tabs */}
-              {Array.from(attachedFiles).map((filePath) => {
+              {attachedFiles.map((filePath) => {
                 const fileName = filePath.split("/").pop() || filePath;
                 return (
                   <div
