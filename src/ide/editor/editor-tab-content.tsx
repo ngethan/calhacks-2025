@@ -46,7 +46,7 @@ export const EditorTabContent = ({
       console.log("[!] -> debounced write", filePath);
       await fileSystem.writeFileAsync(filePath, content);
     },
-    300
+    300,
   );
 
   const onChange = useCallback(
@@ -57,7 +57,7 @@ export const EditorTabContent = ({
       }
       debouncedWrite(path, value || "");
     },
-    [path, debouncedWrite]
+    [path, debouncedWrite],
   );
 
   useEffect(() => {
@@ -72,7 +72,7 @@ export const EditorTabContent = ({
             // Only update if the content is different
             if (currentValue !== newContent) {
               console.log(
-                `[!] -> External change detected for ${path}, updating editor`
+                `[!] -> External change detected for ${path}, updating editor`,
               );
               isUpdatingFromExternal.current = true;
 
@@ -93,7 +93,7 @@ export const EditorTabContent = ({
             }
           }
         }
-      }
+      },
     );
 
     return () => {

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Check, ChevronDown, ChevronRight, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { FileEdit } from "./diff-utils";
+import { SyntaxHighlightedCode, SyntaxHighlightedLine } from "./syntax-highlighter";
 
 type DiffViewerProps = {
   edit: FileEdit;
@@ -72,7 +73,7 @@ function parseDiffToLines(diffText: string): DiffLine[] {
 
 export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
   const [status, setStatus] = useState<"pending" | "accepted" | "rejected">(
-    "pending",
+    "pending"
   );
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -109,7 +110,7 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
               <div className="flex gap-2">
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="default"
                   className="h-7 px-2"
                   onClick={handleAccept}
                 >
@@ -128,7 +129,11 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
               </div>
             ) : (
               <span
-                className={`font-medium text-xs ${status === "accepted" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+                className={`font-medium text-xs ${
+                  status === "accepted"
+                    ? "text-green-600 dark:text-green-400"
+                    : "text-red-600 dark:text-red-400"
+                }`}
               >
                 {status === "accepted" ? "✓ Accepted" : "✗ Rejected"}
               </span>
@@ -148,9 +153,7 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
           </Button>
         </div>
         {!isCollapsed && (
-          <pre className="mx-3 mb-3 max-h-[300px] overflow-x-auto rounded bg-background p-2 text-xs">
-            <code>{edit.content}</code>
-          </pre>
+          <SyntaxHighlightedCode code={edit.content || ""} filePath={edit.path} />
         )}
       </div>
     );
@@ -178,7 +181,7 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
             <div className="flex gap-2">
               <Button
                 size="sm"
-                variant="outline"
+                variant="default"
                 className="h-7 px-2"
                 onClick={handleAccept}
               >
@@ -197,7 +200,11 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
             </div>
           ) : (
             <span
-              className={`font-medium text-xs ${status === "accepted" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+              className={`font-medium text-xs ${
+                status === "accepted"
+                  ? "text-green-600 dark:text-green-400"
+                  : "text-red-600 dark:text-red-400"
+              }`}
             >
               {status === "accepted" ? "✓ Accepted" : "✗ Rejected"}
             </span>
@@ -227,8 +234,8 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
                     line.type === "add"
                       ? "bg-green-500/10"
                       : line.type === "delete"
-                        ? "bg-red-500/10"
-                        : ""
+                      ? "bg-red-500/10"
+                      : ""
                   }
                 >
                   <td className="w-10 select-none border-border border-r bg-muted/30 px-2 py-0 text-right text-muted-foreground">
@@ -239,17 +246,10 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
                   </td>
                   <td className="px-3 py-0">
                     <pre className="inline">
-                      <code
-                        className={
-                          line.type === "add"
-                            ? "text-green-600 dark:text-green-400"
-                            : line.type === "delete"
-                              ? "text-red-600 dark:text-red-400"
-                              : ""
-                        }
-                      >
-                        {line.content}
-                      </code>
+                      <SyntaxHighlightedLine
+                        code={line.content}
+                        filePath={edit.path}
+                      />
                     </pre>
                   </td>
                 </tr>

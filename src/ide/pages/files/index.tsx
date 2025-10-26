@@ -9,7 +9,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { addOpenFile } from "@/ide/editor";
+import { addOpenFile, useEditorState } from "@/ide/editor";
 import type { FSNode } from "@/ide/filesystem";
 import type { FSDirectory } from "@/ide/filesystem";
 import { useFileSystem } from "@/ide/filesystem";
@@ -61,6 +61,16 @@ export const FileTreeNode: React.FC<FileTreeNodeProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState((node as FSDirectory).open || false);
   const { setFiles, files } = useFileSystem();
+  const editorState = useEditorState();
+
+  // Get the currently active file path
+  const activeFilePath = editorState.activeWindow !== null
+    ? editorState.windows[editorState.activeWindow]?.tabs[
+        editorState.windows[editorState.activeWindow]?.activeTab ?? 0
+      ]?.path
+    : null;
+
+  const isActiveFile = !("directory" in node) && activeFilePath === fullPath;
 
   // Sync local state with node's open property when it changes
   useEffect(() => {
@@ -180,9 +190,11 @@ export const FileTreeNode: React.FC<FileTreeNodeProps> = ({
             />
           )}
           <div
-            className={
-              "relative flex cursor-pointer items-center px-2 py-1 hover:bg-[#2A2D2E]"
-            }
+            className={`relative flex cursor-pointer items-center px-2 py-1 transition-colors ${
+              isActiveFile
+                ? "bg-[#2A2D2E] text-foreground"
+                : "hover:bg-[#2A2D2E]"
+            }`}
             style={{
               paddingLeft: `${level * 8 + 12}px`,
             }}

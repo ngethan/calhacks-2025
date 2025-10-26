@@ -1,111 +1,189 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Shadows } from "@/components/ui/shadows";
 import { authClient } from "@/lib/auth-client";
+import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+
+  // Show success message if redirected from email verification
+  useEffect(() => {
+    const success = searchParams.get("success");
+    if (success) {
+      toast.success(success);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    setIsLoading(true);
 
     try {
-      const response = await authClient.signIn.email(
+      await authClient.signIn.email(
         {
-          email,
-          password,
+          email: formData.email,
+          password: formData.password,
         },
         {
           onSuccess: () => {
+            toast.success("Welcome back!");
             router.push("/");
             router.refresh();
           },
           onError: (ctx) => {
-            setError(ctx.error.message ?? "Sign in failed");
+            toast.error(ctx.error.message ?? "Sign in failed");
           },
         },
       );
-
-      if (response.error) {
-        setError(response.error.message ?? "Sign in failed");
-      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign in failed");
+      console.error("Login error:", err);
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
-      <div className="w-full max-w-md space-y-8 rounded-lg bg-white/10 p-8">
-        <div className="text-center">
-          <h2 className="font-bold text-3xl">Sign In</h2>
+    <div className="relative flex min-h-screen items-center justify-center bg-background p-4">
+      <Shadows
+        color="rgba(128, 128, 128, 0.5)"
+        animation={{ scale: 50, speed: 50 }}
+        noise={{ opacity: 0.3, scale: 1 }}
+      />
+
+      <div className="relative z-10 w-full max-w-md space-y-6">
+        <div className="space-y-4 text-center">
+          <div className="flex justify-center">
+            <img
+              src="/logo.png"
+              alt="Aligned Logo"
+              className="h-12 w-12 object-contain"
+            />
+          </div>
+          <div className="space-y-2">
+            <h1 className="font-semibold text-2xl tracking-tight">
+              Welcome back
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Don't have an account?{" "}
+              <Link
+                href="/auth/signup"
+                className="font-medium text-foreground hover:underline"
+              >
+                Sign up
+              </Link>
+            </p>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
             <label htmlFor="email" className="block font-medium text-sm">
               Email
             </label>
-            <input
+            <Input
               id="email"
               type="email"
+              placeholder="name@example.com"
+              value={formData.email}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-md bg-white/20 px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[hsl(280,100%,70%)]"
-              placeholder="you@example.com"
+              disabled={isLoading}
+              className="h-12"
             />
           </div>
 
-          <div>
-            <label htmlFor="password" className="block font-medium text-sm">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-md bg-white/20 px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[hsl(280,100%,70%)]"
-              placeholder="••••••••"
-            />
-          </div>
-
-          {error && (
-            <div className="rounded-md bg-red-500/20 p-3 text-red-200 text-sm">
-              {error}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className="block font-medium text-sm">
+                Password
+              </label>
+              <Link
+                href="/auth/reset-password"
+                className="text-muted-foreground text-xs transition-colors hover:text-foreground"
+              >
+                Forgot password?
+              </Link>
             </div>
-          )}
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
+                required
+                disabled={isLoading}
+                className="h-12 pr-12"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="-translate-y-1/2 absolute top-1/2 right-3 text-muted-foreground transition-colors hover:text-foreground"
+                tabIndex={-1}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+          </div>
 
-          <button
+          <Button
             type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-[hsl(280,100%,70%)] px-4 py-2 font-semibold text-white hover:bg-[hsl(280,100%,60%)] focus:outline-none focus:ring-2 focus:ring-[hsl(280,100%,70%)] focus:ring-offset-2 disabled:opacity-50"
+            className="h-12 w-full"
+            disabled={isLoading || !formData.email.trim() || !formData.password}
           >
-            {loading ? "Signing in..." : "Sign In"}
-          </button>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              "Sign in"
+            )}
+          </Button>
         </form>
 
-        <div className="text-center text-sm">
+        <div className="mt-8 text-center text-muted-foreground text-xs">
+          By signing in, you agree to our{" "}
           <Link
-            href="/auth/signup"
-            className="text-[hsl(280,100%,70%)] hover:underline"
+            href="/privacy"
+            target="_blank"
+            className="underline hover:text-foreground hover:no-underline"
           >
-            Don't have an account? Sign up
+            Privacy Policy
+          </Link>{" "}
+          and{" "}
+          <Link
+            href="/tos"
+            target="_blank"
+            className="underline hover:text-foreground hover:no-underline"
+          >
+            Terms of Service
           </Link>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

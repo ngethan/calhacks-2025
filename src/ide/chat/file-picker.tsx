@@ -2,7 +2,6 @@
 
 import { FileIcon } from "@/components/file-icon";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useFileSystem } from "@/ide/filesystem";
 import { Check, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -98,10 +97,10 @@ export function FilePicker({
   return (
     <div
       ref={containerRef}
-      className="overflow-hidden rounded-lg border border-border bg-background shadow-xl"
+      className="flex h-[400px] flex-col overflow-hidden rounded-lg border border-border bg-background shadow-xl"
     >
-      {/* Search Input */}
-      <div className="border-border/50 border-b p-3">
+      {/* Search Input - Fixed at top */}
+      <div className="shrink-0 border-border/50 border-b p-3">
         <div className="relative flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
@@ -124,13 +123,13 @@ export function FilePicker({
         </div>
       </div>
 
-      {/* File List */}
-      {filteredFiles.length === 0 ? (
-        <div className="p-8 text-center">
-          <p className="text-muted-foreground text-sm">No files found</p>
-        </div>
-      ) : (
-        <ScrollArea className="max-h-[280px]">
+      {/* File List - Scrollable area */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {filteredFiles.length === 0 ? (
+          <div className="flex h-full items-center justify-center p-8">
+            <p className="text-muted-foreground text-sm">No files found</p>
+          </div>
+        ) : (
           <div className="p-2">
             {filteredFiles.map((file, index) => {
               const isSelected = selectedFiles.has(file.path);
@@ -167,11 +166,11 @@ export function FilePicker({
               );
             })}
           </div>
-        </ScrollArea>
-      )}
+        )}
+      </div>
 
-      {/* Footer hint */}
-      <div className="border-border/50 border-t bg-muted/30 px-3 py-2">
+      {/* Footer hint - Fixed at bottom */}
+      <div className="shrink-0 border-border/50 border-t bg-muted/30 px-3 py-2">
         <p className="text-muted-foreground text-xs">
           ↑↓ to navigate · ⏎ to select · ⎋ to close
         </p>

@@ -14,6 +14,7 @@ import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
+import { toast } from "sonner";
 
 type Framework = "react-router-v7" | "nextjs" | null;
 
@@ -104,10 +105,12 @@ export default function AssessmentPage() {
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [selectedFramework, setSelectedFramework] = useState<Framework>(null);
   const [activeSession, setActiveSession] = useState<AssessmentSession | null>(
-    null
+    null,
   );
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
+  const [showAbandonConfirmation, setShowAbandonConfirmation] = useState(false);
+  const [isAbandoning, setIsAbandoning] = useState(false);
 
   // Check for active session on mount
   useEffect(() => {
@@ -140,13 +143,7 @@ export default function AssessmentPage() {
   const handleAbandonSession = async () => {
     if (!activeSession) return;
 
-    if (
-      !confirm(
-        "Are you sure you want to abandon your current assessment? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
+    setIsAbandoning(true);
 
     try {
       const response = await fetch("/api/assessment/abandon", {
@@ -159,25 +156,24 @@ export default function AssessmentPage() {
 
       if (response.ok) {
         setActiveSession(null);
-        alert(
-          "Session abandoned successfully. You can now start a new assessment."
-        );
+        setShowAbandonConfirmation(false);
+        toast.success("Session abandoned! You can now start a new assessment.");
       } else {
         const error = await response.json();
-        alert(`Failed to abandon session: ${error.error}`);
+        toast.error(`Failed to abandon session: ${error.error}`);
       }
     } catch (error) {
       console.error("Error abandoning session:", error);
-      alert("Failed to abandon session. Please try again.");
+      toast.error("Failed to abandon session. Please try again.");
+    } finally {
+      setIsAbandoning(false);
     }
   };
 
   const handleViewProblem = async () => {
     // Check if there's an active session
     if (activeSession) {
-      alert(
-        "You already have an active assessment. Please resume or abandon it first."
-      );
+      toast.error("You already have an active assessment. Please resume or abandon it first.");
       return;
     }
 
@@ -202,7 +198,7 @@ export default function AssessmentPage() {
         const errorText = await response.text().catch(() => "Unknown error");
         console.error("Assessment API error:", response.status, errorText);
         throw new Error(
-          `Failed to generate assessment: ${response.status} - ${errorText}`
+          `Failed to generate assessment: ${response.status} - ${errorText}`,
         );
       }
 
@@ -222,11 +218,11 @@ export default function AssessmentPage() {
       }
     } catch (error) {
       console.error("Error loading assessment:", error);
-      const errorMessage =
+      const errorMsg =
         error instanceof Error ? error.message : "Unknown error";
-      alert(
-        `Failed to load assessment: ${errorMessage}\n\nPlease check that you're logged in and try again.`
-      );
+      toast.error(`Failed to load assessment: ${errorMsg}`, {
+        description: "Please check that you're logged in and try again.",
+      });
     } finally {
       setIsStreaming(false);
     }
@@ -234,7 +230,7 @@ export default function AssessmentPage() {
 
   const handleStartExam = async () => {
     if (!selectedFramework) {
-      alert("Please select a framework first");
+      toast.error("Please select a framework first");
       return;
     }
 
@@ -267,9 +263,9 @@ export default function AssessmentPage() {
       router.push("/ide");
     } catch (error) {
       console.error("Error starting assessment:", error);
-      const errorMessage =
+      const errorMsg =
         error instanceof Error ? error.message : "Unknown error";
-      alert(`Failed to start assessment: ${errorMessage}`);
+      toast.error(`Failed to start assessment: ${errorMsg}`);
       setIsStarting(false);
     }
   };
@@ -300,41 +296,79 @@ export default function AssessmentPage() {
         )}
 
         {!isCheckingSession && activeSession && (
-          <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Badge variant="default" className="bg-amber-500">
-                  Active Session
-                </Badge>
-                <CardTitle>You have an active assessment</CardTitle>
-              </div>
-              <CardDescription className="text-amber-900 dark:text-amber-100">
-                Started {new Date(activeSession.startedAt).toLocaleString()} •
-                Framework: {activeSession.framework}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="mb-4 text-muted-foreground text-sm">
-                You already have an assessment in progress. You can resume where
-                you left off or abandon it to start a new one.
-              </p>
-              <div className="flex gap-3">
-                <a
-                  href="/ide"
-                  className="inline-flex h-10 flex-1 items-center justify-center rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground text-sm ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-                >
-                  Resume Assessment
-                </a>
-                <Button
-                  onClick={handleAbandonSession}
-                  variant="destructive"
-                  className="flex-1"
-                >
-                  Abandon & Start New
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="relative">
+            <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Badge variant="default" className="bg-amber-500">
+                    Active Session
+                  </Badge>
+                  <CardTitle>You have an active assessment</CardTitle>
+                </div>
+                <CardDescription className="text-amber-900 dark:text-amber-100">
+                  Started {new Date(activeSession.startedAt).toLocaleString()} •
+                  Framework: {activeSession.framework}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4 text-muted-foreground text-sm">
+                  You already have an assessment in progress. You can resume where
+                  you left off or abandon it to start a new one.
+                </p>
+                <div className="flex gap-3 relative z-10">
+                  <Button
+                    onClick={handleResumeSession}
+                    className="flex-1"
+                    size="lg"
+                    disabled={showAbandonConfirmation}
+                  >
+                    Resume Assessment
+                  </Button>
+                  <button
+                    onClick={() => setShowAbandonConfirmation(true)}
+                    className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-md bg-destructive px-6 font-medium text-sm text-white transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none"
+                    type="button"
+                    disabled={showAbandonConfirmation}
+                  >
+                    Abandon & Start New
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Confirmation Overlay */}
+            {showAbandonConfirmation && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 rounded-lg backdrop-blur-sm"
+              >
+                <div className="bg-white dark:bg-card rounded-lg p-6 shadow-xl max-w-md mx-4 border border-border">
+                  <h3 className="font-semibold text-lg mb-2">Abandon Assessment?</h3>
+                  <p className="text-muted-foreground text-sm mb-6">
+                    This action cannot be undone and all progress will be lost.
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleAbandonSession}
+                      disabled={isAbandoning}
+                      className="inline-flex h-10 flex-1 items-center justify-center rounded-md bg-red-600 px-4 font-medium text-sm text-white transition-all hover:bg-red-700 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                      {isAbandoning ? "Abandoning..." : "Abandon"}
+                    </button>
+                    <button
+                      onClick={() => setShowAbandonConfirmation(false)}
+                      disabled={isAbandoning}
+                      className="inline-flex h-10 flex-1 items-center justify-center rounded-md border border-gray-600 bg-transparent px-4 font-medium text-sm text-foreground transition-all hover:bg-accent disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
         )}
 
         {!isCheckingSession &&
