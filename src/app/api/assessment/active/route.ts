@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/server/db";
 import { assessmentSession } from "@/server/db/schema/assessment-schema";
-import { eq, and } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
   const session = await auth.api.getSession({
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     const activeAssessment = await db.query.assessmentSession.findFirst({
       where: and(
         eq(assessmentSession.userId, session.user.id),
-        eq(assessmentSession.status, "active")
+        eq(assessmentSession.status, "active"),
       ),
     });
 
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     console.error("Error fetching active session:", error);
     return NextResponse.json(
       { error: "Failed to fetch active session" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

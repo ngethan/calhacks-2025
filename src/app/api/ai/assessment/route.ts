@@ -61,7 +61,7 @@ export async function POST(req: Request) {
         {
           status: 401,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
       "[Assessment API] Generating assessment for user:",
       session.user.id,
       "with framework:",
-      framework || "any"
+      framework || "any",
     );
 
     try {
@@ -103,7 +103,7 @@ export async function POST(req: Request) {
         {
           status: 400,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
     return new Response(
@@ -114,7 +114,7 @@ export async function POST(req: Request) {
       {
         status: 500,
         headers: { "Content-Type": "application/json" },
-      }
+      },
     );
   }
 }

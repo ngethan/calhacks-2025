@@ -87,24 +87,24 @@ export const WebContainerProvider = ({
 
             setWebContainer(instance);
             instance.on("port", (port, type, url) => {
-              listeners.current.port.forEach(({ callback }) =>
-                callback(port, type, url),
-              );
+              for (const { callback } of listeners.current.port) {
+                callback(port, type, url);
+              }
             });
             instance.on("server-ready", (port, url) => {
-              listeners.current["server-ready"].forEach(({ callback }) =>
-                callback(port, url),
-              );
+              for (const { callback } of listeners.current["server-ready"]) {
+                callback(port, url);
+              }
             });
             instance.on("preview-message", (message) => {
-              listeners.current["preview-message"].forEach(({ callback }) =>
-                callback(message),
-              );
+              for (const { callback } of listeners.current["preview-message"]) {
+                callback(message);
+              }
             });
             instance.on("error", (error) => {
-              listeners.current.error.forEach(({ callback }) =>
-                callback(error),
-              );
+              for (const { callback } of listeners.current.error) {
+                callback(error);
+              }
             });
 
             const shellProcess = await instance.spawn("jsh", {
@@ -118,9 +118,11 @@ export const WebContainerProvider = ({
             shellProcess.output.pipeTo(
               new WritableStream({
                 write(data) {
-                  listeners.current["shell-output"].forEach(({ callback }) =>
-                    callback(data),
-                  );
+                  for (const { callback } of listeners.current[
+                    "shell-output"
+                  ]) {
+                    callback(data);
+                  }
                 },
               }),
             );

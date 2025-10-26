@@ -57,10 +57,10 @@ export function useRubricGenerator() {
               console.error(
                 "❌ Rubric generation failed:",
                 response.status,
-                errorText
+                errorText,
               );
               throw new Error(
-                `Failed to generate grading rubric: ${response.status}`
+                `Failed to generate grading rubric: ${response.status}`,
               );
             }
             return response.json();
@@ -90,7 +90,7 @@ export function useRubricGenerator() {
             });
           })
           .then((response) => {
-            if (response && response.ok) {
+            if (response?.ok) {
               console.log("✅ Rubric saved to database");
             }
           });

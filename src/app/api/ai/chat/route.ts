@@ -42,17 +42,19 @@ export async function POST(req: Request) {
     );
 
     // Log each message to debug
-    body.messages?.forEach((msg: any, idx: number) => {
-      console.log(`[API] Message ${idx}:`, {
-        role: msg.role,
-        contentType: typeof msg.content,
-        isArray: Array.isArray(msg.content),
-        contentPreview:
-          typeof msg.content === "string"
-            ? msg.content.substring(0, 100)
-            : JSON.stringify(msg.content).substring(0, 100),
-      });
-    });
+    body.messages?.forEach(
+      (msg: { role: string; content: string }, idx: number) => {
+        console.log(`[API] Message ${idx}:`, {
+          role: msg.role,
+          contentType: typeof msg.content,
+          isArray: Array.isArray(msg.content),
+          contentPreview:
+            typeof msg.content === "string"
+              ? msg.content.substring(0, 100)
+              : JSON.stringify(msg.content).substring(0, 100),
+        });
+      },
+    );
 
     const { messages, currentFile } = requestSchema.parse(body);
     console.log("[API] Parsed successfully. Current file:", currentFile?.path);
@@ -113,7 +115,11 @@ The user can then accept or reject your suggested changes.`
     console.log("[API] Messages to send to OpenRouter:");
     messagesToSend.forEach((msg, idx) => {
       console.log(
-        `  ${idx}: role=${msg.role}, contentType=${typeof msg.content}, isArray=${Array.isArray(msg.content)}, contentLength=${msg.content.length}`,
+        `  ${idx}: role=${
+          msg.role
+        }, contentType=${typeof msg.content}, isArray=${Array.isArray(
+          msg.content,
+        )}, contentLength=${msg.content.length}`,
       );
     });
 

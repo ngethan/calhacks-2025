@@ -1,7 +1,13 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useWebContainer } from '@/components/container';
+import { useWebContainer } from "@/components/container";
+import {
+  type ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 type IFrameContextType = {
   iframeSrc: string | null;
@@ -18,7 +24,7 @@ export const IFrameProvider = ({ children }: { children: ReactNode }) => {
       console.log("server-ready", port, url);
       setIframeSrc(url);
     });
-    
+
     return () => {
       removeListener("server-ready", serverReadyListenerId);
     };
@@ -34,8 +40,7 @@ export const IFrameProvider = ({ children }: { children: ReactNode }) => {
 export const useIFrameSrc = () => {
   const context = useContext(IFrameContext);
   if (!context) {
-    throw new Error('useIFrameSrc must be used within an IFrameProvider');
+    throw new Error("useIFrameSrc must be used within an IFrameProvider");
   }
   return context;
 };
-

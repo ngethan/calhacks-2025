@@ -36,7 +36,9 @@ export const useChatStore = create<ChatState>()(
       activeSessionId: null,
 
       createSession: (name?: string) => {
-        const id = `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const id = `chat-${Date.now()}-${Math.random()
+          .toString(36)
+          .substr(2, 9)}`;
         const now = Date.now();
 
         // Generate chat number based on existing sessions
@@ -66,7 +68,9 @@ export const useChatStore = create<ChatState>()(
             // If we deleted the active session, switch to another one
             if (state.activeSessionId === id) {
               state.activeSessionId =
-                state.sessions.length > 0 ? state.sessions[0]?.id : null;
+                state.sessions.length > 0
+                  ? (state.sessions?.[0]?.id ?? null)
+                  : null;
             }
           }
         });

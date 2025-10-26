@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 // Simple debounce implementation
+// biome-ignore lint/suspicious/noExplicitAny: Generic function type requires any for flexibility
 function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number,
@@ -26,12 +27,26 @@ function debounce<T extends (...args: any[]) => any>(
   return debounced;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: Generic function type requires any for flexibility
 export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
   delay = 0,
 ): ReturnType<typeof debounce> {
-  return useCallback(debounce(callback, delay), [callback, delay]);
+  const callbackRef = useRef(callback);
+  const delayRef = useRef(delay);
+
+  useEffect(() => {
+    callbackRef.current = callback;
+    delayRef.current = delay;
+  });
+
+  return useCallback(
+    debounce(
+      (...args: Parameters<T>) => callbackRef.current(...args),
+      delayRef.current,
+    ),
+    [],
+  );
 }
 
 export function useDebounce<T>(value: T, delay = 0): T {

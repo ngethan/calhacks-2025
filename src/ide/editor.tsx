@@ -1,14 +1,11 @@
 import { useWebContainer } from "@/components/container";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollBar } from "@/components/ui/scroll-area";
 import { EditorTab } from "@/ide/editor/tab";
 import { fileSystem } from "@/ide/filesystem/zen-fs";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { ScrollBar } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Eye, Github, MessageSquare } from "lucide-react";
-import { toast } from "sonner";
 import { TabContent } from "./editor/tab-content";
 
 type EditorWindow = {
@@ -205,9 +202,9 @@ export const IDEEditor = () => {
               onValueChange={(value) =>
                 editorState.setActiveTab(i, Number.parseInt(value))
               }
-              className="w-full h-full"
+              className="h-full w-full"
             >
-              <TabsPrimitive.List className="bg-sidebar flex flex-row overflow-hidden">
+              <TabsPrimitive.List className="flex flex-row overflow-hidden bg-sidebar">
                 <ScrollArea className="w-full">
                   <div className="flex flex-row flex-nowrap">
                     {w.tabs.map((tab, j) => {

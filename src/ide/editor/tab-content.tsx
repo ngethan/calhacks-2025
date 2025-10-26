@@ -1,7 +1,7 @@
 import { EditorTabContent } from "@/ide/editor/editor-tab-content";
 import { IFrame } from "@/ide/iframe";
-import { useMemo } from "react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { useMemo } from "react";
 
 export const TabContent = ({
   tab,

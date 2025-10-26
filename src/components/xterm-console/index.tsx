@@ -1,7 +1,7 @@
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Terminal } from "@xterm/xterm";
-import { createContext, useEffect, useRef } from "react";
+import { createContext, useCallback, useEffect, useRef } from "react";
 
 import { ResizablePanel } from "@/components/ui/resizable";
 
@@ -52,7 +52,7 @@ const XTermConsole = () => {
     term.current.write(`\x1b[34m[WebContainer]\x1b[0m ${status}\n`);
   }, [status]);
 
-  const resize = () => {
+  const resize = useCallback(() => {
     fitAddon.current.fit();
     if (shellProcess) {
       shellProcess.resize({
@@ -60,7 +60,7 @@ const XTermConsole = () => {
         rows: term.current.rows,
       });
     }
-  };
+  }, [shellProcess]);
 
   useEffect(() => {
     if (termRef.current) {
@@ -94,7 +94,7 @@ const XTermConsole = () => {
 
       // window.term = terminal;
     }
-  }, [termRef]);
+  }, [resize]);
 
   useEffect(() => {
     const shellOutputListenerId = addListener("shell-output", (data) => {
@@ -104,7 +104,7 @@ const XTermConsole = () => {
     return () => {
       removeListener("shell-output", shellOutputListenerId);
     };
-  }, [addListener, removeListener, shellProcess]);
+  }, [addListener, removeListener]);
 
   useEffect(() => {
     if (shellProcess) {
@@ -122,7 +122,7 @@ const XTermConsole = () => {
         input.close();
       };
     }
-  }, [shellProcess]);
+  }, [shellProcess, resize]);
 
   return (
     <ResizablePanel defaultSize={30} onResize={resize} className="h-full">

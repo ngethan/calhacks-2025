@@ -453,7 +453,9 @@ class ZenFileSystemHandler {
     if (callbacks && callbacks.size > 0) {
       const content = this.getEditableFileContent(path, true);
       if (content !== null && content !== false) {
-        callbacks.forEach((callback) => callback(content as string));
+        for (const callback of callbacks) {
+          callback(content as string);
+        }
       }
     }
   }

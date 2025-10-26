@@ -35,7 +35,7 @@ const App = () => {
         <div className="flex shrink-0 items-center justify-between gap-2 border-border border-b bg-sidebar px-4 py-2">
           <p>CalHacks</p>
           <p>Recipe App (10:23 left)</p>
-          <div className="flex flex-row gap-2">
+          <div className="flex items-center gap-1">
             <Button
               variant="outline"
               size="sm"
@@ -76,7 +76,7 @@ const App = () => {
                 <ResizablePanel defaultSize={15} minSize={12} maxSize={30} collapsible>
                   <IDESidebarContent />
                 </ResizablePanel>
-                <ResizableHandle withHandle />
+                <ResizableHandle />
                 <ResizablePanel>
                   <ResizablePanelGroup direction="horizontal">
                     <ResizablePanel>
@@ -91,13 +91,13 @@ const App = () => {
                             </ResizablePanel>
                           </ResizablePanelGroup>
                         </ResizablePanel>
-                        <ResizableHandle withHandle />
+                        <ResizableHandle />
                         <XTermConsole />
                       </ResizablePanelGroup>
                     </ResizablePanel>
                     {showChat && (
                       <>
-                        <ResizableHandle withHandle />
+                        <ResizableHandle />
                         <ResizablePanel
                           defaultSize={chatWidth}
                           minSize={20}

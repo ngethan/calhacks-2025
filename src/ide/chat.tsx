@@ -492,16 +492,22 @@ export const Chat = ({ onClose }: ChatProps) => {
       if (isFirstMessage && assistantMessage) {
         generateChatTitle(input, assistantMessage);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Check if it was aborted by user
-      if (error?.name === "AbortError" || error?.message?.includes("abort")) {
+      if (
+        error instanceof Error &&
+        (error.name === "AbortError" || error.message.includes("abort"))
+      ) {
         console.log("[Chat] Request stopped by user");
         // Don't update with error message if user stopped it
       } else {
         console.error("[Chat] Error:", error);
         // Log error details safely
         try {
-          console.error("[Chat] Error message:", error.message);
+          console.error(
+            "[Chat] Error message:",
+            error instanceof Error ? error.message : String(error),
+          );
         } catch (e) {
           console.error("[Chat] Could not log error details");
         }
@@ -530,7 +536,7 @@ export const Chat = ({ onClose }: ChatProps) => {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, []);
 
   return (
     <div className="flex h-full max-h-screen flex-col overflow-y-scroll bg-card">
@@ -736,7 +742,7 @@ export const Chat = ({ onClose }: ChatProps) => {
                 className="h-8 w-8"
                 title="Attach files"
               >
-                <AtSign className="h-4 w-4" />
+                @
               </Button>
 
               {/* Attached file tabs */}

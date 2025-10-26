@@ -1,8 +1,8 @@
+import { env } from "@/env";
+import { auth } from "@/lib/auth";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { z } from "zod";
-import { env } from "@/env";
-import { auth } from "@/lib/auth";
 
 const openrouter = createOpenAI({
   apiKey: env.OPENROUTER_API_KEY,
@@ -15,8 +15,9 @@ const requestSchema = z.object({
 });
 
 const getGradingPrompt = (challenge: string, framework: string) => {
-  const frameworkName = framework === "react-router-v7" ? "React Router v7" : "Next.js";
-  
+  const frameworkName =
+    framework === "react-router-v7" ? "React Router v7" : "Next.js";
+
   return `You are an expert technical interviewer creating a holistic grading rubric for a coding assessment.
 
 ## Challenge
@@ -128,7 +129,7 @@ export async function POST(req: Request) {
       "[Grading Rubric API] Generating rubric for user:",
       session.user.id,
       "with framework:",
-      framework
+      framework,
     );
 
     try {
@@ -146,12 +147,14 @@ export async function POST(req: Request) {
       console.log("[Grading Rubric API] Generated rubric");
 
       // Parse the JSON response
-      let rubric;
+      let rubric: Record<string, unknown>;
       try {
         // Try to extract JSON if it's wrapped in markdown code blocks
-        const jsonMatch = result.text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+        const jsonMatch = result.text.match(
+          /```(?:json)?\s*\n?([\s\S]*?)\n?```/,
+        );
         const jsonText = jsonMatch?.[1] ?? result.text;
-        rubric = JSON.parse(jsonText.trim());
+        rubric = JSON.parse(jsonText.trim()) as Record<string, unknown>;
       } catch (parseError) {
         console.error("[Grading Rubric API] Failed to parse JSON:", parseError);
         throw new Error("Failed to parse rubric JSON from AI response");
@@ -167,7 +170,7 @@ export async function POST(req: Request) {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
     } catch (generateError) {
       console.error("[Grading Rubric API] generateText error:", generateError);
@@ -182,7 +185,7 @@ export async function POST(req: Request) {
         {
           status: 400,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
     return new Response(
@@ -193,8 +196,7 @@ export async function POST(req: Request) {
       {
         status: 500,
         headers: { "Content-Type": "application/json" },
-      }
+      },
     );
   }
 }
-
