@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import { Streamdown } from "streamdown";
 
 export const ChallengePage = () => {
   const [challenge, setChallenge] = useState<string | null>(null);
@@ -94,7 +94,7 @@ export const ChallengePage = () => {
           )}
         </div>
         <div className="prose prose-sm dark:prose-invert max-w-none">
-          <ReactMarkdown>{challenge}</ReactMarkdown>
+          <Streamdown>{challenge}</Streamdown>
         </div>
       </div>
     </ScrollArea>
