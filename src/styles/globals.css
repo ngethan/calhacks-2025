@@ -44,6 +44,8 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-editor-background: var(--editor-background);
+  --color-active: var(--active);
 }
 
 :root {
@@ -79,6 +81,8 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --editor-background: oklch(1 0 0); /* White for light theme */
+  --active: oklch(0.646 0.222 41.116); /* Blue accent for active items */
 }
 
 .dark {
@@ -114,6 +118,8 @@
   --sidebar-accent-foreground: #d7dae0;
   --sidebar-border: #181a1f;
   --sidebar-ring: #61afef;
+  --editor-background: #282c34; /* Same as main background for dark theme */
+  --active: #61afef; /* Blue accent for active items */
 }
 
 @layer base {
@@ -210,4 +216,32 @@
 
 .dark .diff-code-delete {
   background: rgba(224, 108, 117, 0.2);
+}
+
+/* Markdown Chat Styles */
+.prose ul {
+  list-style-type: disc !important;
+  padding-left: 1.5rem !important;
+  margin: 0.5rem 0 !important;
+}
+
+.prose ol {
+  list-style-type: decimal !important;
+  padding-left: 1.5rem !important;
+  margin: 0.5rem 0 !important;
+}
+
+.prose li {
+  margin: 0.125rem 0 !important;
+  display: list-item !important;
+  line-height: 1.5 !important;
+}
+
+.prose li::marker {
+  color: var(--muted-foreground);
+}
+
+.prose p {
+  line-height: 1.5 !important;
+  margin: 0.5rem 0 !important;
 }

@@ -25,17 +25,18 @@ const SidebarButton = memo(
     return (
       <div
         className={cn(
-          "flex h-12 w-12 items-center justify-center rounded-none border-l-2",
-          currentPage === toPage ? "border-l-active" : "border-l-transparent",
+          "flex h-12 w-12 items-center justify-center rounded-none border-l-2 transition-colors",
+          currentPage === toPage ? "border-l-blue-500 bg-sidebar-accent" : "border-l-transparent",
         )}
       >
         <button
           type="button"
           onClick={() => setPage(toPage)}
           className={cn(
+            "transition-colors",
             currentPage === toPage
-              ? "text-white"
-              : "text-muted-foreground hover:text-white",
+              ? "text-foreground"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
           <page.icon size={24} />
@@ -73,8 +74,8 @@ export const IDESidebar = () => {
               asChild
               key={key}
               className={cn(
-                "scale-150 rounded-none border-l-2 hover:cursor-pointer",
-                router.page === key ? "border-active" : "border-transparent",
+                "scale-150 rounded-none border-l-2 transition-colors hover:cursor-pointer",
+                router.page === key ? "border-l-blue-500 bg-sidebar-accent text-foreground" : "border-l-transparent text-muted-foreground",
               )}
               onClick={() => router.setPage(key as AllPages)}
             >

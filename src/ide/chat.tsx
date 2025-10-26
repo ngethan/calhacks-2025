@@ -14,7 +14,6 @@ import { fileSystem } from "@/ide/filesystem/zen-fs";
 import { type Message, useChatStore } from "@/ide/stores/chat-store";
 import { cn } from "@/lib/utils";
 import {
-  AtSign,
   Check,
   ChevronDown,
   Edit2,
@@ -26,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Streamdown } from "streamdown";
 
 const WORKSPACE_ROOT = "/home/workspace";
 
@@ -72,7 +72,7 @@ function MessageContent({
   if (isUser) {
     // Check if there are attached files and extract just the user's message
     const attachedFilesMatch = content.match(
-      /\*\*Attached Files:\*\*([\s\S]*)/,
+      /\*\*Attached Files:\*\*([\s\S]*)/
     );
     if (attachedFilesMatch) {
       // Only show the user's actual message, not the attached file context
@@ -110,10 +110,13 @@ function MessageContent({
   return (
     <div className="space-y-3">
       {displayContent && (
-        <div className="prose prose-sm dark:prose-invert max-w-none">
-          <pre className="whitespace-pre-wrap font-sans text-sm">
+        <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-semibold prose-p:text-sm prose-p:leading-snug prose-headings:tracking-tight [&_li]:my-0.5 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6">
+          <Streamdown
+            parseIncompleteMarkdown={false}
+            shikiTheme={["github-dark", "github-dark"]}
+          >
             {displayContent}
-          </pre>
+          </Streamdown>
         </div>
       )}
       {hasEdits &&
@@ -174,7 +177,7 @@ export const Chat = ({ onClose }: ChatProps) => {
       (path) => {
         const content = fileSystem.getEditableFileContent(path, true);
         return typeof content === "string" ? content : null;
-      },
+      }
     );
   };
 
@@ -215,7 +218,7 @@ export const Chat = ({ onClose }: ChatProps) => {
         // Apply diff to existing file
         const fileContent = fileSystem.getEditableFileContent(
           normalizedPath,
-          true,
+          true
         );
         const currentContent =
           typeof fileContent === "string" ? fileContent : "";
@@ -223,7 +226,7 @@ export const Chat = ({ onClose }: ChatProps) => {
 
         if (!patchedContent) {
           console.error(
-            `[Chat] Failed to apply diff to ${edit.path} (resolved ${normalizedPath})`,
+            `[Chat] Failed to apply diff to ${edit.path} (resolved ${normalizedPath})`
           );
           return;
         }
@@ -241,7 +244,7 @@ export const Chat = ({ onClose }: ChatProps) => {
         source: "external",
       });
       console.log(
-        `[Chat] Applied edit to ${edit.path} (resolved ${normalizedPath})`,
+        `[Chat] Applied edit to ${edit.path} (resolved ${normalizedPath})`
       );
     } catch (error) {
       console.error(`[Chat] Failed to apply edit to ${edit.path}:`, error);
@@ -251,7 +254,7 @@ export const Chat = ({ onClose }: ChatProps) => {
   const handleRejectEdit = (edit: FileEdit) => {
     const normalizedPath = normalizeEditPath(edit.path);
     console.log(
-      `[Chat] Rejected edit to ${edit.path} (resolved ${normalizedPath})`,
+      `[Chat] Rejected edit to ${edit.path} (resolved ${normalizedPath})`
     );
   };
 
@@ -273,7 +276,7 @@ export const Chat = ({ onClose }: ChatProps) => {
               role: "user",
               content: `User: ${firstMessage}\n\nAssistant: ${response.substring(
                 0,
-                200,
+                200
               )}`,
             },
           ],
@@ -333,7 +336,7 @@ export const Chat = ({ onClose }: ChatProps) => {
         const content = fileSystem.getEditableFileContent(filePath, false);
         if (typeof content === "string") {
           fileContents.push(
-            `\n\n--- File: ${filePath} ---\n${content}\n--- End of ${filePath} ---`,
+            `\n\n--- File: ${filePath} ---\n${content}\n--- End of ${filePath} ---`
           );
         }
       }
@@ -376,19 +379,19 @@ export const Chat = ({ onClose }: ChatProps) => {
         // Handle various content types
         if (Array.isArray(content)) {
           console.warn(
-            `[Chat] Message ${idx} has array content, converting to string`,
+            `[Chat] Message ${idx} has array content, converting to string`
           );
           content = content
             .map((c) => (typeof c === "string" ? c : JSON.stringify(c)))
             .join("\n");
         } else if (typeof content === "object" && content !== null) {
           console.warn(
-            `[Chat] Message ${idx} has object content, converting to string`,
+            `[Chat] Message ${idx} has object content, converting to string`
           );
           content = JSON.stringify(content);
         } else if (typeof content !== "string") {
           console.warn(
-            `[Chat] Message ${idx} has ${typeof content} content, converting to string`,
+            `[Chat] Message ${idx} has ${typeof content} content, converting to string`
           );
           content = String(content);
         }
@@ -403,7 +406,7 @@ export const Chat = ({ onClose }: ChatProps) => {
 
     console.log(
       "[Chat] Sending message. Message count:",
-      currentMessages.length,
+      currentMessages.length
     );
     console.log(
       "[Chat] Final messages being sent:",
@@ -412,7 +415,7 @@ export const Chat = ({ onClose }: ChatProps) => {
         contentType: typeof m.content,
         contentLength: m.content.length,
         contentPreview: m.content.substring(0, 100),
-      })),
+      }))
     );
 
     setInput("");
@@ -506,7 +509,7 @@ export const Chat = ({ onClose }: ChatProps) => {
         try {
           console.error(
             "[Chat] Error message:",
-            error instanceof Error ? error.message : String(error),
+            error instanceof Error ? error.message : String(error)
           );
         } catch (e) {
           console.error("[Chat] Could not log error details");
@@ -514,7 +517,7 @@ export const Chat = ({ onClose }: ChatProps) => {
         // Update last message with error
         updateLastMessage(
           activeSessionId,
-          "Sorry, an error occurred. Please try again.",
+          "Sorry, an error occurred. Please try again."
         );
       }
     } finally {
@@ -590,7 +593,7 @@ export const Chat = ({ onClose }: ChatProps) => {
                   key={session.id}
                   className={cn(
                     "flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 transition-colors hover:bg-muted/50",
-                    session.id === activeSessionId && "bg-muted",
+                    session.id === activeSessionId && "bg-muted"
                   )}
                 >
                   {editingSessionId === session.id ? (
@@ -680,7 +683,7 @@ export const Chat = ({ onClose }: ChatProps) => {
                 <div
                   className={cn(
                     "h-1 w-1 rounded-full",
-                    msg.role === "user" ? "bg-primary" : "bg-muted-foreground",
+                    msg.role === "user" ? "bg-primary" : "bg-muted-foreground"
                   )}
                 />
                 <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wide">
@@ -692,7 +695,7 @@ export const Chat = ({ onClose }: ChatProps) => {
                   "rounded-md text-xs leading-relaxed",
                   msg.role === "user"
                     ? "ml-2.5 bg-primary/10 px-3 py-2 text-foreground"
-                    : "ml-2.5 text-foreground/90",
+                    : "ml-2.5 text-foreground/90"
                 )}
               >
                 <MessageContent
@@ -777,7 +780,7 @@ export const Chat = ({ onClose }: ChatProps) => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask, learn, brainstorm"
+              placeholder="Summarize this file..."
               className="max-h-[200px] min-h-[80px] resize-none border-0 bg-transparent px-3 pt-3 pb-10 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
             />
 

@@ -37,7 +37,7 @@ export const EditorTab = ({
     <TabsPrimitive.Trigger
       key={path}
       value={`${index}`}
-      className="flex min-w-0 max-w-[250px] flex-row place-items-center gap-2 border-sidebar-accent border-x border-t bg-sidebar p-2 hover:bg-sidebar-accent data-[state=active]:bg-editor-background"
+      className="flex min-w-0 max-w-[250px] flex-row place-items-center gap-2 border-sidebar-accent border-x border-t bg-sidebar p-2 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground data-[state=active]:border-b-2 data-[state=active]:border-b-active data-[state=active]:bg-editor-background data-[state=active]:text-foreground"
     >
       <FileIcon
         node={{ file: { size: 0, isBinary: false } }}
@@ -55,7 +55,7 @@ export const EditorTab = ({
         }}
         className="shrink-0 rounded-md p-1 hover:bg-sidebar-accent"
       >
-        <X className="h-4 w-4 hover:text-red-500" />
+        <X className="h-4 w-4 hover:text-white" />
       </div>
     </TabsPrimitive.Trigger>
   );
