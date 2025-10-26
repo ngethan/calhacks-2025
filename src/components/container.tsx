@@ -56,7 +56,7 @@ export const WebContainerContext = createContext<{
   shellProcess: WebContainerProcess | null;
   addListener: <T extends keyof WebContainerEventMap>(
     event: T,
-    callback: WebContainerEventMap[T]
+    callback: WebContainerEventMap[T],
   ) => string;
   removeListener: (event: keyof WebContainerEventMap, id: string) => void;
 } | null>(null);
@@ -67,7 +67,7 @@ let globalWebContainerInstance: {
   status: WebContainerStatus;
   addListener: <T extends keyof WebContainerEventMap>(
     event: T,
-    callback: WebContainerEventMap[T]
+    callback: WebContainerEventMap[T],
   ) => string;
   removeListener: (event: keyof WebContainerEventMap, id: string) => void;
 } | null = null;
@@ -88,7 +88,7 @@ export const WebContainerProvider = ({
   });
   const status = useRef<WebContainerStatus>("booting");
   const [shellProcess, setShellProcess] = useState<WebContainerProcess | null>(
-    null
+    null,
   );
 
   useEffect(() => {
@@ -138,7 +138,7 @@ export const WebContainerProvider = ({
                     callback(data);
                   }
                 },
-              })
+              }),
             );
 
             // Check if coding-challenge directory already exists in the workspace
@@ -148,13 +148,17 @@ export const WebContainerProvider = ({
                 try {
                   await instance.fs.readdir("/home/workspace/coding-challenge");
                   // Directory exists, just cd into it and skip initialization
-                  console.log("coding-challenge directory already exists, skipping initialization");
+                  console.log(
+                    "coding-challenge directory already exists, skipping initialization",
+                  );
                   const writer = shellProcess.input.getWriter();
                   writer.write("cd coding-challenge\n");
                   writer.releaseLock();
                 } catch (error) {
                   // Directory doesn't exist, run initialization commands
-                  console.log("coding-challenge directory not found, running initialization commands");
+                  console.log(
+                    "coding-challenge directory not found, running initialization commands",
+                  );
                   const writer = shellProcess.input.getWriter();
                   for (const command of commands) {
                     writer.write(`${command}\n`);
@@ -171,7 +175,7 @@ export const WebContainerProvider = ({
               addListener,
               removeListener,
             };
-          }
+          },
         );
       });
     }
@@ -181,7 +185,7 @@ export const WebContainerProvider = ({
   // Add the addListener and removeListener functions
   const addListener = <T extends keyof WebContainerEventMap>(
     event: T,
-    callback: WebContainerEventMap[T]
+    callback: WebContainerEventMap[T],
   ): string => {
     const id = crypto.randomUUID();
     listeners.current[event].push({ id, callback: callback });
@@ -189,10 +193,10 @@ export const WebContainerProvider = ({
   };
   const removeListener = <T extends keyof WebContainerEventMap>(
     event: T,
-    id: string
+    id: string,
   ) => {
     listeners.current[event] = listeners.current[event].filter(
-      (listener) => listener.id !== id
+      (listener) => listener.id !== id,
     ) as Listeners[T];
   };
 
@@ -219,7 +223,7 @@ export const useWebContainer = () => {
   const context = useContext(WebContainerContext);
   if (!context) {
     throw new Error(
-      "useWebContainer must be used within a WebContainerProvider"
+      "useWebContainer must be used within a WebContainerProvider",
     );
   }
   return {
@@ -232,7 +236,7 @@ export const useWebContainer = () => {
 export const getWebContainer = () => {
   if (!globalWebContainerInstance) {
     throw new Error(
-      "WebContainer not initialized. Ensure WebContainerProvider is mounted."
+      "WebContainer not initialized. Ensure WebContainerProvider is mounted.",
     );
   }
   return globalWebContainerInstance;

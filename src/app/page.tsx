@@ -105,7 +105,7 @@ export default function AssessmentPage() {
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [selectedFramework, setSelectedFramework] = useState<Framework>(null);
   const [activeSession, setActiveSession] = useState<AssessmentSession | null>(
-    null
+    null,
   );
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
@@ -174,7 +174,7 @@ export default function AssessmentPage() {
     // Check if there's an active session
     if (activeSession) {
       toast.error(
-        "You already have an active assessment. Please resume or abandon it first."
+        "You already have an active assessment. Please resume or abandon it first.",
       );
       return;
     }
@@ -200,7 +200,7 @@ export default function AssessmentPage() {
         const errorText = await response.text().catch(() => "Unknown error");
         console.error("Assessment API error:", response.status, errorText);
         throw new Error(
-          `Failed to generate assessment: ${response.status} - ${errorText}`
+          `Failed to generate assessment: ${response.status} - ${errorText}`,
         );
       }
 

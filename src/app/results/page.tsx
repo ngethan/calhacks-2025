@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 type GradingResults = {
   overallScore: number;
@@ -59,7 +59,7 @@ type SubmissionData = {
 };
 
 function getGradeColor(
-  grade: string
+  grade: string,
 ): "success" | "warning" | "destructive" | "secondary" {
   switch (grade.toLowerCase()) {
     case "excellent":
@@ -90,7 +90,7 @@ function getStatusIcon(status: "passed" | "partial" | "failed") {
   }
 }
 
-export default function ResultsPage() {
+function ResultsContent() {
   const searchParams = useSearchParams();
   const submissionId = searchParams.get("submissionId");
 
@@ -102,7 +102,7 @@ export default function ResultsPage() {
   const formatDuration = (start: string, end: string | null) => {
     if (!end) return "N/A";
     const seconds = Math.floor(
-      (new Date(end).getTime() - new Date(start).getTime()) / 1000
+      (new Date(end).getTime() - new Date(start).getTime()) / 1000,
     );
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -119,7 +119,7 @@ export default function ResultsPage() {
     const fetchSubmission = async () => {
       try {
         const response = await fetch(
-          `/api/assessment/submission/${submissionId}`
+          `/api/assessment/submission/${submissionId}`,
         );
 
         if (!response.ok) {
@@ -214,12 +214,11 @@ export default function ResultsPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-white/60">Progress</span>
-                <span className="font-medium text-white">{Math.round(gradingProgress)}%</span>
+                <span className="font-medium text-white">
+                  {Math.round(gradingProgress)}%
+                </span>
               </div>
-              <Progress
-                value={gradingProgress}
-                className="h-3 bg-white/10"
-              />
+              <Progress value={gradingProgress} className="h-3 bg-white/10" />
             </div>
 
             {data && (
@@ -304,7 +303,9 @@ export default function ResultsPage() {
               <CardContent className="p-6">
                 <div className="mb-2 flex items-center gap-2">
                   <Code2 className="h-4 w-4 text-blue-400" />
-                  <span className="text-sm text-white/60">AI Effectiveness</span>
+                  <span className="text-sm text-white/60">
+                    AI Effectiveness
+                  </span>
                 </div>
                 <div className="mb-1 font-bold text-3xl text-white">
                   {results.aiUtilization.effectiveness}%
@@ -335,7 +336,7 @@ export default function ResultsPage() {
                 <div className="mb-1 font-bold text-3xl text-white">
                   {formatDuration(
                     data.session.startedAt,
-                    data.session.completedAt
+                    data.session.completedAt,
                   )}
                 </div>
                 <p className="text-white/40 text-xs">Time spent</p>
@@ -417,7 +418,9 @@ export default function ResultsPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
                         <div className="mb-2 flex items-center gap-2">
-                          <CardTitle className="text-white">{item.name}</CardTitle>
+                          <CardTitle className="text-white">
+                            {item.name}
+                          </CardTitle>
                           <Badge
                             variant="secondary"
                             className="border-white/20 bg-white/10 text-white text-xs"
@@ -523,5 +526,38 @@ export default function ResultsPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function ResultsPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="relative min-h-screen overflow-hidden bg-linear-to-br from-slate-950 via-blue-950 to-slate-900">
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute top-0 right-1/4 h-[500px] w-[500px] rounded-full bg-blue-500/20 blur-[120px]" />
+            <div className="absolute bottom-0 left-1/4 h-[500px] w-[500px] rounded-full bg-purple-500/20 blur-[120px]" />
+          </div>
+          <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-12">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-md text-center"
+            >
+              <div className="mb-6">
+                <h2 className="mb-2 font-semibold text-white text-xl">
+                  Loading Results...
+                </h2>
+                <p className="text-white/60">
+                  Please wait while we load your assessment results.
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        </main>
+      }
+    >
+      <ResultsContent />
+    </Suspense>
   );
 }

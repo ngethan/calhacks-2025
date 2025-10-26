@@ -28,7 +28,7 @@ export const ChallengePage = () => {
         console.log("[Challenge Page] Problem content:", data.problemContent);
         console.log(
           "[Challenge Page] Problem content length:",
-          data.problemContent?.length
+          data.problemContent?.length,
         );
 
         setDebugInfo(`Received ${data.problemContent?.length || 0} characters`);
@@ -88,7 +88,7 @@ export const ChallengePage = () => {
 
   console.log(
     "[Challenge Page] ✅ Rendering challenge, length:",
-    challenge.length
+    challenge.length,
   );
 
   return (

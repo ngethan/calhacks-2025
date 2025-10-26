@@ -91,6 +91,12 @@ export async function POST(request: Request) {
       .where(eq(assessmentSession.id, sessionId));
 
     const submissionId = submission[0]?.id;
+    if (!submissionId) {
+      return NextResponse.json(
+        { error: "Failed to create submission" },
+        { status: 500 },
+      );
+    }
     console.log("[Submit API] Submission created:", submissionId);
 
     // Trigger grading in background (don't await) - pass request headers for auth
