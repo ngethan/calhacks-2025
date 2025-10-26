@@ -1,8 +1,8 @@
+import { env } from "@/env";
+import { auth } from "@/lib/auth";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { z } from "zod";
-import { env } from "@/env";
-import { auth } from "@/lib/auth";
 
 const openrouter = createOpenAI({
   apiKey: env.OPENROUTER_API_KEY,
@@ -147,14 +147,14 @@ export async function POST(req: Request) {
       console.log("[Grading Rubric API] Generated rubric");
 
       // Parse the JSON response
-      let rubric;
+      let rubric: Record<string, unknown>;
       try {
         // Try to extract JSON if it's wrapped in markdown code blocks
         const jsonMatch = result.text.match(
           /```(?:json)?\s*\n?([\s\S]*?)\n?```/,
         );
         const jsonText = jsonMatch?.[1] ?? result.text;
-        rubric = JSON.parse(jsonText.trim());
+        rubric = JSON.parse(jsonText.trim()) as Record<string, unknown>;
       } catch (parseError) {
         console.error("[Grading Rubric API] Failed to parse JSON:", parseError);
         throw new Error("Failed to parse rubric JSON from AI response");

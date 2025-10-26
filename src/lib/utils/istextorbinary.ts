@@ -180,18 +180,18 @@ function getChunkEnd(buf: Buffer, chunkEnd: number) {
   return chunkEnd;
 }
 
-function isFirstByteOf4ByteChar(byte: number) {
-  return byte >> 3 === 30; // 11110xxx?
+function isFirstByteOf4ByteChar(byte: number | undefined) {
+  return byte !== undefined && byte >> 3 === 30; // 11110xxx?
 }
 
-function isFirstByteOf3ByteChar(byte: number) {
-  return byte >> 4 === 14; // 1110xxxx?
+function isFirstByteOf3ByteChar(byte: number | undefined) {
+  return byte !== undefined && byte >> 4 === 14; // 1110xxxx?
 }
 
-function isFirstByteOf2ByteChar(byte: number) {
-  return byte >> 5 === 6; // 110xxxxx?
+function isFirstByteOf2ByteChar(byte: number | undefined) {
+  return byte !== undefined && byte >> 5 === 6; // 110xxxxx?
 }
 
-function isLaterByteOfUtf8(byte: number) {
-  return byte >> 6 === 2; // 10xxxxxx?
+function isLaterByteOfUtf8(byte: number | undefined) {
+  return byte !== undefined && byte >> 6 === 2; // 10xxxxxx?
 }

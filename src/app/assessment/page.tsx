@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,9 +10,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Streamdown } from "streamdown";
 import { motion } from "motion/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { Streamdown } from "streamdown";
 
 type Framework = "react-router-v7" | "nextjs" | null;
 
@@ -39,8 +39,8 @@ function AnimatedStreamdown({ content }: { content: string }) {
     if (!containerRef.current) return;
 
     const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
           if (node instanceof HTMLElement) {
             // Animate newly added elements
             node.style.opacity = "0";
@@ -53,8 +53,8 @@ function AnimatedStreamdown({ content }: { content: string }) {
               parent.style.animation = "streamFadeIn 0.5s ease-out forwards";
             }
           }
-        });
-      });
+        }
+      }
     });
 
     observer.observe(containerRef.current, {
@@ -104,7 +104,7 @@ export default function AssessmentPage() {
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [selectedFramework, setSelectedFramework] = useState<Framework>(null);
   const [activeSession, setActiveSession] = useState<AssessmentSession | null>(
-    null,
+    null
   );
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
@@ -142,7 +142,7 @@ export default function AssessmentPage() {
 
     if (
       !confirm(
-        "Are you sure you want to abandon your current assessment? This action cannot be undone.",
+        "Are you sure you want to abandon your current assessment? This action cannot be undone."
       )
     ) {
       return;
@@ -160,7 +160,7 @@ export default function AssessmentPage() {
       if (response.ok) {
         setActiveSession(null);
         alert(
-          "Session abandoned successfully. You can now start a new assessment.",
+          "Session abandoned successfully. You can now start a new assessment."
         );
       } else {
         const error = await response.json();
@@ -176,7 +176,7 @@ export default function AssessmentPage() {
     // Check if there's an active session
     if (activeSession) {
       alert(
-        "You already have an active assessment. Please resume or abandon it first.",
+        "You already have an active assessment. Please resume or abandon it first."
       );
       return;
     }
@@ -202,7 +202,7 @@ export default function AssessmentPage() {
         const errorText = await response.text().catch(() => "Unknown error");
         console.error("Assessment API error:", response.status, errorText);
         throw new Error(
-          `Failed to generate assessment: ${response.status} - ${errorText}`,
+          `Failed to generate assessment: ${response.status} - ${errorText}`
         );
       }
 
@@ -225,7 +225,7 @@ export default function AssessmentPage() {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
       alert(
-        `Failed to load assessment: ${errorMessage}\n\nPlease check that you're logged in and try again.`,
+        `Failed to load assessment: ${errorMessage}\n\nPlease check that you're logged in and try again.`
       );
     } finally {
       setIsStreaming(false);
@@ -276,9 +276,9 @@ export default function AssessmentPage() {
 
   return (
     <main className="min-h-screen bg-linear-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="container mx-auto max-w-4xl px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold tracking-tight mb-2">
+          <h1 className="mb-2 font-bold text-4xl tracking-tight">
             Your Assessment
           </h1>
           <p className="text-muted-foreground">
@@ -290,7 +290,7 @@ export default function AssessmentPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <div className="h-8 w-8 animate-spin rounded-full border-primary border-b-2" />
                 <span className="ml-3 text-muted-foreground">
                   Checking for active sessions...
                 </span>
@@ -314,14 +314,14 @@ export default function AssessmentPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="mb-4 text-muted-foreground text-sm">
                 You already have an assessment in progress. You can resume where
                 you left off or abandon it to start a new one.
               </p>
               <div className="flex gap-3">
                 <a
                   href="/ide"
-                  className="flex-1 inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+                  className="inline-flex h-10 flex-1 items-center justify-center rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground text-sm ring-offset-background transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                 >
                   Resume Assessment
                 </a>
@@ -380,7 +380,7 @@ export default function AssessmentPage() {
                     <AnimatedStreamdown content={assessmentContent} />
                     {isStreaming && (
                       <motion.span
-                        className="inline-block w-2 h-5 bg-primary ml-1"
+                        className="ml-1 inline-block h-5 w-2 bg-primary"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: [0, 1, 0] }}
                         transition={{
@@ -415,7 +415,7 @@ export default function AssessmentPage() {
                           onClick={() =>
                             setSelectedFramework("react-router-v7")
                           }
-                          className={`p-6 rounded-lg border-2 transition-all hover:shadow-md ${
+                          className={`rounded-lg border-2 p-6 transition-all hover:shadow-md ${
                             selectedFramework === "react-router-v7"
                               ? "border-primary bg-primary/5"
                               : "border-border hover:border-primary/50"
@@ -425,13 +425,13 @@ export default function AssessmentPage() {
                             <img
                               src="/react-router.png"
                               alt="React Router"
-                              className="w-12 h-12 shrink-0"
+                              className="h-12 w-12 shrink-0"
                             />
-                            <div className="text-left flex-1">
-                              <div className="text-xl font-bold mb-1">
+                            <div className="flex-1 text-left">
+                              <div className="mb-1 font-bold text-xl">
                                 React Router v7
                               </div>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-muted-foreground text-sm">
                                 Modern React framework with file-based routing
                               </p>
                             </div>
@@ -441,7 +441,7 @@ export default function AssessmentPage() {
                         <button
                           type="button"
                           onClick={() => setSelectedFramework("nextjs")}
-                          className={`p-6 rounded-lg border-2 transition-all hover:shadow-md ${
+                          className={`rounded-lg border-2 p-6 transition-all hover:shadow-md ${
                             selectedFramework === "nextjs"
                               ? "border-primary bg-primary/5"
                               : "border-border hover:border-primary/50"
@@ -451,13 +451,13 @@ export default function AssessmentPage() {
                             <img
                               src="/next-icon.png"
                               alt="Next.js"
-                              className="w-12 h-12 shrink-0"
+                              className="h-12 w-12 shrink-0"
                             />
-                            <div className="text-left flex-1">
-                              <div className="text-xl font-bold mb-1">
+                            <div className="flex-1 text-left">
+                              <div className="mb-1 font-bold text-xl">
                                 Next.js
                               </div>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-muted-foreground text-sm">
                                 The React framework for production
                               </p>
                             </div>
@@ -474,7 +474,7 @@ export default function AssessmentPage() {
                       >
                         {isStarting ? (
                           <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-white border-b-2" />
                             Starting Assessment...
                           </>
                         ) : (

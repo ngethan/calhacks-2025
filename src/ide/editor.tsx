@@ -1,14 +1,11 @@
 import { useWebContainer } from "@/components/container";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollBar } from "@/components/ui/scroll-area";
 import { EditorTab } from "@/ide/editor/tab";
 import { fileSystem } from "@/ide/filesystem/zen-fs";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { ScrollBar } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Eye, Github, MessageSquare } from "lucide-react";
-import { toast } from "sonner";
 import { TabContent } from "./editor/tab-content";
 
 type EditorWindow = {
@@ -103,13 +100,13 @@ export const useEditorState = create<EditorState>()(
           const w = state.windows[state.activeWindow];
           if (w) {
             const existingTabIndex = w.tabs.findIndex(
-              (tab) => tab.path === path,
+              (tab) => tab.path === path
             );
             if (existingTabIndex >= 0) {
               w.activeTab = existingTabIndex;
               console.log(
                 "tab already exists, setting active tab to",
-                existingTabIndex,
+                existingTabIndex
               );
             } else {
               w.tabs.push({ path, content: "" });
@@ -120,7 +117,7 @@ export const useEditorState = create<EditorState>()(
         }
       });
     },
-  })),
+  }))
   // {
   //   name: "runway-editor-state",
   //   storage: createJSONStorage(() => localStorage),
@@ -180,12 +177,12 @@ export const IDEEditor = () => {
                     {w.tabs.map((tab, j) => {
                       // Determine duplicate basename in this window
                       const fileName = tab.path.substring(
-                        tab.path.lastIndexOf("/") + 1,
+                        tab.path.lastIndexOf("/") + 1
                       );
                       const hasDuplicate = w.tabs.some((t, idx) => {
                         if (idx === j) return false;
                         const otherFileName = t.path.substring(
-                          t.path.lastIndexOf("/") + 1,
+                          t.path.lastIndexOf("/") + 1
                         );
                         return fileName === otherFileName;
                       });

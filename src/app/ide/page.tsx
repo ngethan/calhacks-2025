@@ -1,7 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useRubricGenerator } from "@/hooks/use-rubric-generator";
+import dynamic from "next/dynamic";
 
 const App = dynamic(() => import("@/ide/app"), { ssr: false });
 

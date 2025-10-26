@@ -1,5 +1,5 @@
-import { pgTable, text, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
 
 export const assessmentSession = pgTable("assessment_session", {

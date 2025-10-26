@@ -6,7 +6,7 @@ export interface RubricStatus {
   isGenerating: boolean;
   isReady: boolean;
   hasFailed: boolean;
-  rubric: any | null;
+  rubric: unknown;
   challenge: string | null;
   framework: string | null;
   sessionId: string | null;

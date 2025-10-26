@@ -14,9 +14,9 @@ export function parseFileEdits(text: string): FileEdit[] {
   const edits: FileEdit[] = [];
   const regex =
     /<file_edit>\s*<path>(.*?)<\/path>\s*(?:<diff>(.*?)<\/diff>|<content>(.*?)<\/content>)\s*<\/file_edit>/gs;
-  let match;
+  let match: RegExpExecArray | null = regex.exec(text);
 
-  while ((match = regex.exec(text)) !== null) {
+  while (match !== null) {
     const path = match[1]?.trim() ?? "";
     const diff = match[2]?.trim();
     const content = match[3]?.trim();
@@ -26,6 +26,8 @@ export function parseFileEdits(text: string): FileEdit[] {
       diff: diff || undefined,
       content: content || undefined,
     });
+
+    match = regex.exec(text);
   }
 
   return edits;

@@ -96,7 +96,9 @@ const mockResults = {
   ],
 };
 
-function getGradeColor(grade: string) {
+function getGradeColor(
+  grade: string,
+): "success" | "warning" | "destructive" | "secondary" {
   switch (grade.toLowerCase()) {
     case "excellent":
       return "success";
@@ -142,7 +144,7 @@ export default function ResultsPage() {
           </p>
         </div>
         <Badge
-          variant={getGradeColor(mockResults.overallGrade) as any}
+          variant={getGradeColor(mockResults.overallGrade)}
           className="px-3 py-1 text-sm"
         >
           {mockResults.overallGrade}
@@ -215,7 +217,7 @@ export default function ResultsPage() {
                           {item.category}
                         </CardTitle>
                         <Badge
-                          variant={getGradeColor(item.grade) as any}
+                          variant={getGradeColor(item.grade)}
                           className="text-xs"
                         >
                           {item.grade}

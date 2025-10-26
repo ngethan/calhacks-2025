@@ -104,7 +104,7 @@ const XTermConsole = () => {
     return () => {
       removeListener("shell-output", shellOutputListenerId);
     };
-  }, [addListener, removeListener, resize]);
+  }, [addListener, removeListener]);
 
   useEffect(() => {
     if (shellProcess) {
@@ -122,7 +122,7 @@ const XTermConsole = () => {
         input.close();
       };
     }
-  }, [shellProcess]);
+  }, [shellProcess, resize]);
 
   return (
     <ResizablePanel defaultSize={30} onResize={resize} className="h-full">

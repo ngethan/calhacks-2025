@@ -42,17 +42,19 @@ export async function POST(req: Request) {
     );
 
     // Log each message to debug
-    body.messages?.forEach((msg: any, idx: number) => {
-      console.log(`[API] Message ${idx}:`, {
-        role: msg.role,
-        contentType: typeof msg.content,
-        isArray: Array.isArray(msg.content),
-        contentPreview:
-          typeof msg.content === "string"
-            ? msg.content.substring(0, 100)
-            : JSON.stringify(msg.content).substring(0, 100),
-      });
-    });
+    body.messages?.forEach(
+      (msg: { role: string; content: string }, idx: number) => {
+        console.log(`[API] Message ${idx}:`, {
+          role: msg.role,
+          contentType: typeof msg.content,
+          isArray: Array.isArray(msg.content),
+          contentPreview:
+            typeof msg.content === "string"
+              ? msg.content.substring(0, 100)
+              : JSON.stringify(msg.content).substring(0, 100),
+        });
+      },
+    );
 
     const { messages, currentFile } = requestSchema.parse(body);
     console.log("[API] Parsed successfully. Current file:", currentFile?.path);

@@ -1,27 +1,6 @@
-import type React from "react";
-import { useState, useEffect, useRef } from "react";
-import {
-  ChevronRight,
-  ChevronDown,
-  FilePlus,
-  FolderPlus,
-  RefreshCw,
-  MoreHorizontal,
-  ListCollapse,
-  X,
-  Check,
-  Trash,
-} from "lucide-react";
-import type { FSNode } from "@/ide/filesystem";
-import type { FSDirectory } from "@/ide/filesystem";
-import { useFileSystem } from "@/ide/filesystem";
-import { FileIcon } from "@/components/file-icon";
-import { fileSystem } from "@/ide/filesystem/zen-fs";
-import { addOpenFile } from "@/ide/editor";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { getWebContainer } from "@/components/container";
+import { FileIcon } from "@/components/file-icon";
+import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -29,6 +8,27 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { addOpenFile } from "@/ide/editor";
+import type { FSNode } from "@/ide/filesystem";
+import type { FSDirectory } from "@/ide/filesystem";
+import { useFileSystem } from "@/ide/filesystem";
+import { fileSystem } from "@/ide/filesystem/zen-fs";
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  FilePlus,
+  FolderPlus,
+  ListCollapse,
+  MoreHorizontal,
+  RefreshCw,
+  Trash,
+  X,
+} from "lucide-react";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 interface FileTreeNodeProps {
   name: string;
   level: number;
@@ -122,7 +122,7 @@ export const FileTreeNode: React.FC<FileTreeNodeProps> = ({
             >
               Cancel
             </Button>
-          </>
+          </>,
         );
         console.log(" -> binary file", fullPath);
       }
@@ -237,7 +237,7 @@ export const FilesPage = () => {
   const { files, setFiles } = useFileSystem();
   const sorted = sortedEntries(files);
   const [creatingType, setCreatingType] = useState<"file" | "folder" | null>(
-    null
+    null,
   );
   const [creatingPath, setCreatingPath] = useState<string>("/");
   const [newItemName, setNewItemName] = useState("");
@@ -283,17 +283,17 @@ export const FilesPage = () => {
 
       if (isDirectory) {
         await container.webContainer?.fs.rm(path, { recursive: true });
-        toast.success(`Folder deleted`);
+        toast.success("Folder deleted");
       } else {
         await container.webContainer?.fs.rm(path);
-        toast.success(`File deleted`);
+        toast.success("File deleted");
       }
     } catch (error) {
       console.error("Error deleting item:", error);
       toast.error(
         `Failed to delete: ${
           error instanceof Error ? error.message : "Unknown error"
-        }`
+        }`,
       );
     }
   };
@@ -330,7 +330,7 @@ export const FilesPage = () => {
       toast.error(
         `Failed to create ${creatingType}: ${
           error instanceof Error ? error.message : "Unknown error"
-        }`
+        }`,
       );
     }
 
@@ -378,7 +378,7 @@ export const FilesPage = () => {
   return (
     <div className="group h-full overflow-auto bg-sidebar p-2 font-mono text-sm">
       <div className="group/header mb-2 flex items-center justify-between">
-        <h2 className="font-sans text-xs font-semibold uppercase text-muted-foreground">
+        <h2 className="font-sans font-semibold text-muted-foreground text-xs uppercase">
           Explorer
         </h2>
         <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover/header:opacity-100">
@@ -412,11 +412,11 @@ export const FilesPage = () => {
       {creatingType && (
         <div className="mb-2 space-y-1">
           {creatingPath !== "/" && (
-            <div className="text-xs text-muted-foreground px-2">
+            <div className="px-2 text-muted-foreground text-xs">
               Creating in: <span className="font-mono">{creatingPath}</span>
             </div>
           )}
-          <div className="flex items-center gap-1 px-2 py-1 bg-[#2A2D2E] rounded">
+          <div className="flex items-center gap-1 rounded bg-[#2A2D2E] px-2 py-1">
             <FileIcon
               node={
                 creatingType === "folder"
@@ -434,17 +434,17 @@ export const FilesPage = () => {
               placeholder={
                 creatingType === "file" ? "filename.ext" : "foldername"
               }
-              className="flex-1 bg-transparent border-none outline-none text-xs px-1"
+              className="flex-1 border-none bg-transparent px-1 text-xs outline-none"
             />
             <button
-              className="p-0.5 hover:bg-[#3A3D3E] rounded transition-colors"
+              className="rounded p-0.5 transition-colors hover:bg-[#3A3D3E]"
               onClick={handleConfirmCreate}
               title="Confirm"
             >
               <Check size={14} className="text-green-500" />
             </button>
             <button
-              className="p-0.5 hover:bg-[#3A3D3E] rounded transition-colors"
+              className="rounded p-0.5 transition-colors hover:bg-[#3A3D3E]"
               onClick={handleCancelCreate}
               title="Cancel"
             >
@@ -462,7 +462,7 @@ export const FilesPage = () => {
               name={name}
               node={node}
               level={0}
-              fullPath={"/" + name}
+              fullPath={`/${name}`}
               onCreateFile={handleContextCreateFile}
               onCreateFolder={handleContextCreateFolder}
               onDelete={handleDelete}

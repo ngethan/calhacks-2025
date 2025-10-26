@@ -90,7 +90,7 @@ export function useRubricGenerator() {
             });
           })
           .then((response) => {
-            if (response && response.ok) {
+            if (response?.ok) {
               console.log("✅ Rubric saved to database");
             }
           });

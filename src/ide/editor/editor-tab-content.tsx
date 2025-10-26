@@ -2,10 +2,10 @@
 
 import { TabsContent } from "@/components/ui/tabs";
 import { fileSystem } from "@/ide/filesystem/zen-fs";
-import { Editor, loader, type Monaco } from "@monaco-editor/react";
-import { useTheme } from "next-themes";
-import { useEffect, useRef, useCallback } from "react";
 import { useDebouncedCallback } from "@/lib/utils/debounce-hooks";
+import { Editor, type Monaco, loader } from "@monaco-editor/react";
+import { useTheme } from "next-themes";
+import { useCallback, useEffect, useRef } from "react";
 
 loader.init().then((monaco) => {
   monaco.editor.defineTheme("runway-dark", {
@@ -32,7 +32,11 @@ export const EditorTabContent = ({
   tab,
   path,
   index,
-}: { tab: string; path: string; index: number }) => {
+}: {
+  tab: string;
+  path: string;
+  index: number;
+}) => {
   const editorRef = useRef<MonacoEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const isUpdatingFromExternal = useRef(false);
@@ -42,7 +46,7 @@ export const EditorTabContent = ({
       console.log("[!] -> debounced write", filePath);
       await fileSystem.writeFileAsync(filePath, content);
     },
-    300,
+    300
   );
 
   const onChange = useCallback(
@@ -53,7 +57,7 @@ export const EditorTabContent = ({
       }
       debouncedWrite(path, value || "");
     },
-    [path, debouncedWrite],
+    [path, debouncedWrite]
   );
 
   useEffect(() => {
@@ -68,7 +72,7 @@ export const EditorTabContent = ({
             // Only update if the content is different
             if (currentValue !== newContent) {
               console.log(
-                `[!] -> External change detected for ${path}, updating editor`,
+                `[!] -> External change detected for ${path}, updating editor`
               );
               isUpdatingFromExternal.current = true;
 
@@ -89,7 +93,7 @@ export const EditorTabContent = ({
             }
           }
         }
-      },
+      }
     );
 
     return () => {
@@ -100,7 +104,7 @@ export const EditorTabContent = ({
   const theme = useTheme();
 
   return (
-    <TabsContent key={tab} value={index + ""} className="mt-0">
+    <TabsContent key={tab} value={`${index}`} className="mt-0">
       <Editor
         height="90vh"
         path={tab}
