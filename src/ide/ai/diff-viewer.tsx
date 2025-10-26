@@ -8,7 +8,7 @@ import { SyntaxHighlightedCode, SyntaxHighlightedLine } from "./syntax-highlight
 
 type DiffViewerProps = {
   edit: FileEdit;
-  onAccept: () => void;
+  onAccept: (onFallbackStart?: () => void, onFallbackEnd?: () => void) => void;
   onReject: () => void;
 };
 
@@ -72,10 +72,11 @@ function parseDiffToLines(diffText: string): DiffLine[] {
 }
 
 export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
-  const [status, setStatus] = useState<"pending" | "accepted" | "rejected">(
+  const [status, setStatus] = useState<"pending" | "accepted" | "rejected" | "applying">(
     "pending"
   );
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isFallbackLoading, setIsFallbackLoading] = useState(false);
 
   const diffLines = useMemo(() => {
     if (!edit.diff) return [];
@@ -88,8 +89,24 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
   }, [edit.diff]);
 
   const handleAccept = () => {
-    setStatus("accepted");
-    onAccept();
+    setStatus("applying");
+    onAccept(
+      () => {
+        // onFallbackStart
+        setIsFallbackLoading(true);
+      },
+      () => {
+        // onFallbackEnd
+        setIsFallbackLoading(false);
+        setStatus("accepted");
+      }
+    );
+    // Set to accepted immediately if no fallback is needed
+    setTimeout(() => {
+      if (status === "applying" && !isFallbackLoading) {
+        setStatus("accepted");
+      }
+    }, 100);
   };
 
   const handleReject = () => {
@@ -127,6 +144,10 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
                   Reject
                 </Button>
               </div>
+            ) : status === "applying" || isFallbackLoading ? (
+              <span className="font-medium text-xs text-yellow-600 dark:text-yellow-400">
+                {isFallbackLoading ? "⚡ Applying with AI fallback..." : "⏳ Applying..."}
+              </span>
             ) : (
               <span
                 className={`font-medium text-xs ${
@@ -142,7 +163,7 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 w-6 flex-shrink-0 p-0"
+            className="h-6 w-6 shrink-0 p-0"
             onClick={() => setIsCollapsed(!isCollapsed)}
           >
             {isCollapsed ? (
@@ -198,6 +219,10 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
                 Reject
               </Button>
             </div>
+          ) : status === "applying" || isFallbackLoading ? (
+            <span className="font-medium text-xs text-yellow-600 dark:text-yellow-400">
+              {isFallbackLoading ? "⚡ Applying with AI fallback..." : "⏳ Applying..."}
+            </span>
           ) : (
             <span
               className={`font-medium text-xs ${
@@ -213,7 +238,7 @@ export function DiffViewer({ edit, onAccept, onReject }: DiffViewerProps) {
         <Button
           size="sm"
           variant="ghost"
-          className="h-6 w-6 flex-shrink-0 p-0"
+          className="h-6 w-6 shrink-0 p-0"
           onClick={() => setIsCollapsed(!isCollapsed)}
         >
           {isCollapsed ? (

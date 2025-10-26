@@ -69,7 +69,7 @@ function MessageContent({
 }: {
   content: string;
   parts?: any[];
-  onAccept?: (edit: FileEdit) => void;
+  onAccept?: (edit: FileEdit, onFallbackStart?: () => void, onFallbackEnd?: () => void) => void;
   onReject?: (edit: FileEdit) => void;
   isUser?: boolean;
 }) {
@@ -170,7 +170,9 @@ function MessageContent({
                   <DiffViewer
                     key={idx}
                     edit={edit}
-                    onAccept={() => onAccept?.(edit)}
+                    onAccept={(onFallbackStart, onFallbackEnd) => 
+                      onAccept?.(edit, onFallbackStart, onFallbackEnd)
+                    }
                     onReject={() => onReject?.(edit)}
                   />
                 );
@@ -530,7 +532,7 @@ export const Chat = ({ onClose }: ChatProps) => {
     setShowFilePicker(!showFilePicker);
   };
 
-  const handleAcceptEdit = async (edit: FileEdit) => {
+  const handleAcceptEdit = async (edit: FileEdit, onFallbackStart?: () => void, onFallbackEnd?: () => void) => {
     try {
       const normalizedPath = normalizeEditPath(edit.path);
 
@@ -547,13 +549,49 @@ export const Chat = ({ onClose }: ChatProps) => {
         const patchedContent = applyDiff(currentContent, edit.diff);
 
         if (!patchedContent) {
-          console.error(
-            `[Chat] Failed to apply diff to ${edit.path} (resolved ${normalizedPath})`
+          console.warn(
+            `[Chat] Failed to apply diff to ${edit.path} (resolved ${normalizedPath}), attempting fallback with Claude Haiku...`
           );
-          return;
-        }
+          
+          // Attempt fallback using Claude Haiku
+          try {
+            onFallbackStart?.();
+            
+            const fallbackResponse = await fetch("/api/ai/fallback-edit", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                path: edit.path,
+                currentContent,
+                diff: edit.diff,
+                explanation: (edit as any).explanation,
+              }),
+            });
 
-        finalContent = patchedContent;
+            if (!fallbackResponse.ok) {
+              throw new Error(`Fallback API returned ${fallbackResponse.status}`);
+            }
+
+            const fallbackData = await fallbackResponse.json();
+            
+            if (!fallbackData.success || !fallbackData.content) {
+              throw new Error("Fallback did not return valid content");
+            }
+
+            console.log(`[Chat] Successfully applied fallback edit to ${edit.path}`);
+            finalContent = fallbackData.content;
+          } catch (fallbackError) {
+            console.error(`[Chat] Fallback also failed for ${edit.path}:`, fallbackError);
+            onFallbackEnd?.();
+            return;
+          } finally {
+            onFallbackEnd?.();
+          }
+        } else {
+          finalContent = patchedContent;
+        }
       } else if (edit.content) {
         // Full file replacement
         finalContent = edit.content;
